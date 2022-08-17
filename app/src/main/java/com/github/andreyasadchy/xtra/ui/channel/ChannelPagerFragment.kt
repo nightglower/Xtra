@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.navArgs
 import androidx.viewpager.widget.ViewPager
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
@@ -32,18 +33,7 @@ import kotlinx.android.synthetic.main.fragment_media_pager.*
 
 class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
 
-    companion object {
-        fun newInstance(id: String?, login: String?, name: String?, channelLogo: String?, updateLocal: Boolean = false, streamId: String? = null) = ChannelPagerFragment().apply {
-            arguments = Bundle().apply {
-                putString(C.CHANNEL_ID, id)
-                putString(C.CHANNEL_LOGIN, login)
-                putString(C.CHANNEL_DISPLAYNAME, name)
-                putString(C.CHANNEL_PROFILEIMAGE, channelLogo)
-                putBoolean(C.CHANNEL_UPDATELOCAL, updateLocal)
-                putString(C.STREAM_ID, streamId)
-            }
-        }
-    }
+    private val args: ChannelPagerFragmentArgs by navArgs()
 
     private val viewModel by viewModels<ChannelPagerViewModel> { viewModelFactory }
 
@@ -52,6 +42,16 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        args.let {
+            arguments = Bundle().apply {
+                putString(C.CHANNEL_ID, it.channelId)
+                putString(C.CHANNEL_LOGIN, it.channelLogin)
+                putString(C.CHANNEL_DISPLAYNAME, it.channelName)
+                putString(C.CHANNEL_PROFILEIMAGE, it.channelLogo)
+                putBoolean(C.CHANNEL_UPDATELOCAL, it.updateLocal)
+                putString(C.STREAM_ID, it.streamId)
+            }
+        }
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
         val user = User.get(activity)

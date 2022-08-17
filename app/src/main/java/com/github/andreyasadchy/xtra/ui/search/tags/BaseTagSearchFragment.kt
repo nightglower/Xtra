@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.common.pagers.MediaPagerFragment
@@ -20,21 +21,20 @@ import kotlinx.coroutines.delay
 
 class BaseTagSearchFragment : MediaPagerFragment() {
 
-    companion object {
-        fun newInstance(getGameTags: Boolean, gameId: String?, gameName: String?) = BaseTagSearchFragment().apply {
-            arguments = Bundle().apply {
-                putBoolean(C.GET_GAME_TAGS, getGameTags)
-                putString(C.GAME_ID, gameId)
-                putString(C.GAME_NAME, gameName)
-            }
-        }
-    }
+    private val args: BaseTagSearchFragmentArgs by navArgs()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_search, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        args.let {
+            arguments = Bundle().apply {
+                putBoolean(C.GET_GAME_TAGS, it.getGameTags)
+                putString(C.GAME_ID, it.gameId)
+                putString(C.GAME_NAME, it.gameName)
+            }
+        }
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
         val adapter = BaseTagSearchPagerAdapter(childFragmentManager).apply {

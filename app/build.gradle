@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     id("kotlin-android-extensions")
     id("kotlin-kapt")
+    id("androidx.navigation.safeargs.kotlin")
     id("com.apollographql.apollo3").version("$apollo_ver")
 }
 
@@ -20,7 +21,7 @@ android {
         applicationId "com.github.andreyasadchy.xtra"
         minSdkVersion 21
         targetSdkVersion 32
-        versionCode 120
+        versionCode 109
         versionName "2.4.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
@@ -96,10 +97,11 @@ dependencies {
     kapt "androidx.room:room-compiler:$room"
     implementation 'androidx.core:core-ktx:1.8.0'
     implementation 'androidx.fragment:fragment-ktx:1.5.2'
+    implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
+    implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
 
     //Misc
     implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.9'
-    implementation 'com.ncapdevi:frag-nav:3.3.0'
     implementation 'com.iheartradio.m3u8:open-m3u8:0.2.6'
 
     implementation "com.squareup.retrofit2:retrofit:$retrofit"

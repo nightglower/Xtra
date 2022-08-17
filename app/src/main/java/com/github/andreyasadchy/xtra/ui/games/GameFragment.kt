@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment
 import com.github.andreyasadchy.xtra.ui.common.MediaFragment
@@ -17,18 +18,17 @@ import kotlinx.android.synthetic.main.fragment_media.*
 
 class GameFragment : MediaFragment() {
 
-    companion object {
-        fun newInstance(id: String?, name: String?, tags: List<String>?, updateLocal: Boolean) = GameFragment().apply {
-            arguments = Bundle().apply {
-                putString(C.GAME_ID, id)
-                putString(C.GAME_NAME, name)
-                putStringArray(C.TAGS, tags?.toTypedArray())
-                putBoolean(C.CHANNEL_UPDATELOCAL, updateLocal)
-            }
-        }
-    }
+    private val args: GameFragmentArgs by navArgs()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        args.let {
+            arguments = Bundle().apply {
+                putString(C.GAME_ID, it.gameId)
+                putString(C.GAME_NAME, it.gameName)
+                putStringArray(C.TAGS, it.tags)
+                putBoolean(C.CHANNEL_UPDATELOCAL, it.updateLocal)
+            }
+        }
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
         if (!requireArguments().getString(C.GAME_ID).isNullOrBlank() || !requireArguments().getString(C.GAME_NAME).isNullOrBlank()) {

@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.User
@@ -33,13 +34,7 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
         fun openTagGames(tags: List<String>?)
     }
 
-    companion object {
-        fun newInstance(tags: List<String>?) = GamesFragment().apply {
-            arguments = Bundle().apply {
-                putStringArray(C.TAGS, tags?.toTypedArray())
-            }
-        }
-    }
+    private val args: GamesFragmentArgs by navArgs()
 
     override val viewModel by viewModels<GamesViewModel> { viewModelFactory }
     override val adapter: BasePagedListAdapter<Game> by lazy { GamesAdapter(this, requireActivity() as MainActivity, requireActivity() as MainActivity) }
@@ -49,6 +44,11 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        args.let {
+            arguments = Bundle().apply {
+                putStringArray(C.TAGS, it.tags)
+            }
+        }
         if (arguments?.getStringArray(C.TAGS).isNullOrEmpty()) {
             scrollTop.isEnabled = false
         }

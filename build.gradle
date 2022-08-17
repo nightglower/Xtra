@@ -4,6 +4,7 @@ buildscript {
     ext.paging = '2.1.2'
     ext.lifecycle = '2.5.1'
     ext.room = '2.4.3'
+    ext.nav_version = '2.5.1'
     ext.exoplayer = '2.18.1'
     ext.dagger = '2.43.2'
     ext.retrofit = '2.9.0'
@@ -19,6 +20,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:7.2.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
