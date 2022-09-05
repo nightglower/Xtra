@@ -5,7 +5,7 @@ import com.github.andreyasadchy.xtra.model.helix.tag.Tag
 import com.github.andreyasadchy.xtra.model.offline.Downloadable
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.google.gson.annotations.SerializedName
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Video(

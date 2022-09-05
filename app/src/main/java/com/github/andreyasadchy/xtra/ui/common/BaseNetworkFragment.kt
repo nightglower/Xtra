@@ -1,16 +1,13 @@
 package com.github.andreyasadchy.xtra.ui.common
 
 import android.os.Bundle
+import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
-import com.github.andreyasadchy.xtra.di.Injectable
 import com.github.andreyasadchy.xtra.ui.main.MainViewModel
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
-import javax.inject.Inject
 
-abstract class BaseNetworkFragment : Fragment(), Injectable {
+abstract class BaseNetworkFragment : Fragment() {
 
     private companion object {
         const val LAST_KEY = "last"
@@ -18,9 +15,7 @@ abstract class BaseNetworkFragment : Fragment(), Injectable {
         const val CREATED_KEY = "created"
     }
 
-    @Inject
-    protected lateinit var viewModelFactory: ViewModelProvider.Factory
-    private val mainViewModel by activityViewModels<MainViewModel> { viewModelFactory }
+    private val mainViewModel: MainViewModel by activityViewModels()
 
     protected var enableNetworkCheck = true
     private var lastState = false
@@ -42,14 +37,13 @@ abstract class BaseNetworkFragment : Fragment(), Injectable {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         if (enableNetworkCheck) {
             if (!isInitialized && (created || (lastState && userVisibleHint))) {
                 init()
             }
-            mainViewModel.isNetworkAvailable.observe(viewLifecycleOwner, Observer {
+            mainViewModel.isNetworkAvailable.observe(viewLifecycleOwner) {
                 val isOnline = it.peekContent()
                 if (isOnline) {
                     if (!lastState) {
@@ -70,7 +64,7 @@ abstract class BaseNetworkFragment : Fragment(), Injectable {
                     }
                 }
                 lastState = isOnline
-            })
+            }
         } else {
             initialize()
         }
@@ -80,23 +74,6 @@ abstract class BaseNetworkFragment : Fragment(), Injectable {
         super.onDestroyView()
         if (enableNetworkCheck) {
             isInitialized = false
-        }
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun setUserVisibleHint(isVisibleToUser: Boolean) {
-        super.setUserVisibleHint(isVisibleToUser)
-        if (enableNetworkCheck) {
-            if (!isInitialized) {
-                if (isVisibleToUser && isResumed && lastState) {
-                    init()
-                }
-            } else if (shouldRestore && lastState) {
-                if (isVisibleToUser) {
-                    onNetworkRestored()
-                    shouldRestore = false
-                }
-            }
         }
     }
 

@@ -1,35 +1,40 @@
 package com.github.andreyasadchy.xtra.ui.follow.games
 
-import android.app.Application
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.apollographql.apollo3.ApolloClient
 import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.game.Game
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
+import com.github.andreyasadchy.xtra.repository.datasource.FollowedGamesDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
+@HiltViewModel
 class FollowedGamesViewModel @Inject constructor(
-        context: Application,
-        private val repository: TwitchService) : PagedListViewModel<Game>() {
+    @ApplicationContext context: Context,
+    private val localFollowsGame: LocalFollowGameRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val apolloClient: ApolloClient) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Game>> = Transformations.map(filter) {
-        repository.loadFollowedGames(it.user.id, it.gqlClientId, it.user.gqlToken, it.apiPref, viewModelScope)
-    }
-
-    fun setUser(user: User, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
-        if (filter.value == null) {
-            filter.value = Filter(user, gqlClientId, apiPref)
-        }
-    }
-
-    private data class Filter(
-        val user: User,
-        val gqlClientId: String?,
-        val apiPref: ArrayList<Pair<Long?, String?>?>)
+    val flow = Pager(
+        PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+    ) {
+        FollowedGamesDataSource(
+            localFollowsGame = localFollowsGame,
+            userId = User.get(context).id,
+            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlToken = User.get(context).gqlToken,
+            gqlApi = graphQLRepository,
+            apolloClient = apolloClient,
+            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_GAMES, ""), TwitchApiHelper.followedGamesApiDefaults))
+    }.flow.cachedIn(viewModelScope)
 }

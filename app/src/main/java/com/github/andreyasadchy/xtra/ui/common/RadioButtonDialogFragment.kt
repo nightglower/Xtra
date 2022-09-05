@@ -11,8 +11,8 @@ import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import androidx.appcompat.widget.AppCompatRadioButton
-import androidx.core.os.bundleOf
 import androidx.core.widget.NestedScrollView
+import androidx.navigation.fragment.navArgs
 
 
 class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
@@ -21,19 +21,7 @@ class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
         fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?)
     }
 
-    companion object {
-
-        private const val REQUEST_CODE = "requestCode"
-        private const val LABELS = "labels"
-        private const val TAGS = "tags"
-        private const val CHECKED = "checked"
-
-        fun newInstance(requestCode: Int, labels: Collection<CharSequence>, tags: IntArray? = null, checkedIndex: Int): RadioButtonDialogFragment {
-            return RadioButtonDialogFragment().apply {
-                arguments = bundleOf(REQUEST_CODE to requestCode, LABELS to ArrayList(labels), TAGS to tags, CHECKED to checkedIndex)
-            }
-        }
-    }
+    private val args: RadioButtonDialogFragmentArgs by navArgs()
 
     private lateinit var listenerSort: OnSortOptionChanged
 
@@ -44,19 +32,18 @@ class RadioButtonDialogFragment : ExpandingBottomSheetDialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val context = requireContext()
-        val arguments = requireArguments()
         val layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
         val radioGroup = RadioGroup(context).also { it.layoutParams = layoutParams }
-        val checkedId = arguments.getInt(CHECKED)
+        val checkedId = args.checkedIndex
         val clickListener = View.OnClickListener { v ->
             val clickedId = v.id
             if (clickedId != checkedId) {
-                listenerSort.onChange(arguments.getInt(REQUEST_CODE), clickedId, (v as RadioButton).text, v.tag as Int?)
+                listenerSort.onChange(args.requestCode, clickedId, (v as RadioButton).text, v.tag as Int?)
             }
             dismiss()
         }
-        val tags = arguments.getIntArray(TAGS)
-        arguments.getCharSequenceArrayList(LABELS)?.forEachIndexed { index, label ->
+        val tags = args.tags
+        args.labels.forEachIndexed { index, label ->
             val button = AppCompatRadioButton(context).apply {
                 id = index
                 text = label

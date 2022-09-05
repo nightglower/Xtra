@@ -1,18 +1,19 @@
 package com.github.andreyasadchy.xtra.ui.player.clip
 
-import android.app.Application
+import android.content.Context
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerHelper
@@ -24,15 +25,16 @@ import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val TAG = "ClipPlayerViewModel"
-
+@HiltViewModel
 class ClipPlayerViewModel @Inject constructor(
-    context: Application,
+    @ApplicationContext context: Context,
     private val graphQLRepository: GraphQLRepository,
-    private val repository: TwitchService,
+    private val repository: ApiRepository,
     private val localFollowsChannel: LocalFollowChannelRepository) : PlayerViewModel(context), FollowViewModel {
 
     private lateinit var clip: Clip
@@ -137,7 +139,7 @@ class ClipPlayerViewModel @Inject constructor(
 
     override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, repository = repository, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, user = user, helixClientId = helixClientId, gqlClientId = gqlClientId, setting = setting, viewModelScope = viewModelScope)
         }
     }
 
@@ -145,7 +147,7 @@ class ClipPlayerViewModel @Inject constructor(
         val error2 = player.playerError
         if (error2 != null) {
             if (error2.type == ExoPlaybackException.TYPE_UNEXPECTED && error2.unexpectedException is IllegalStateException) {
-                val context = getApplication<Application>()
+                val context = XtraApp.INSTANCE.applicationContext
                 context.shortToast(R.string.player_error)
                 if (qualityIndex < helper.urls.size - 1) {
                     changeQuality(++qualityIndex)

@@ -5,60 +5,54 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.model.helix.follows.Follow
+import com.github.andreyasadchy.xtra.databinding.FragmentStreamsBinding
 import com.github.andreyasadchy.xtra.model.helix.follows.Order
 import com.github.andreyasadchy.xtra.model.helix.follows.Sort
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
-import com.github.andreyasadchy.xtra.ui.common.Scrollable
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
-import kotlinx.android.synthetic.main.fragment_followed_channels.*
-import kotlinx.android.synthetic.main.sort_bar.*
+import dagger.hilt.android.AndroidEntryPoint
 
-class FollowedChannelsFragment : PagedListFragment<Follow, FollowedChannelsViewModel, BasePagedListAdapter<Follow>>(), FollowedChannelsSortDialog.OnFilter, Scrollable {
+@AndroidEntryPoint
+class FollowedChannelsFragment : PagedListFragment(), FollowedChannelsSortDialog.OnFilter {
 
-    override val viewModel by viewModels<FollowedChannelsViewModel> { viewModelFactory }
-    override val adapter: BasePagedListAdapter<Follow> by lazy {
-        val activity = requireActivity() as MainActivity
-        FollowedChannelsAdapter(this, activity)
-    }
+    private var _binding: FragmentStreamsBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: FollowedChannelsViewModel by viewModels()
+    private val pagingAdapter = FollowedChannelsAdapter(this)
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_followed_channels, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentStreamsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun initialize() {
-        super.initialize()
-        viewModel.sortText.observe(viewLifecycleOwner) {
-            sortText.text = it
-        }
-        viewModel.setUser(
-            context = requireContext(),
-            user = User.get(requireContext()),
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-            apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_FOLLOWED_CHANNELS, ""), TwitchApiHelper.followedChannelsApiDefaults),
-        )
-        sortBar.visible()
-        sortBar.setOnClickListener {
-            FollowedChannelsSortDialog.newInstance(
-                sort = viewModel.sort,
-                order = viewModel.order,
-                saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, false)
-            ).show(childFragmentManager, null)
+        with(binding) {
+            viewModel.setUser(requireContext())
+            init(recyclerViewLayout, pagingAdapter, viewModel.flow)
+            viewModel.sortText.observe(viewLifecycleOwner) {
+                sortBar.sortText.text = it
+            }
+            sortBar.root.visible()
+            sortBar.root.setOnClickListener {
+                with(viewModel.filter.value) {
+                    findNavController().navigate(FollowedChannelsSortDialogDirections.actionGlobalFollowedChannelsSortDialog(
+                        sort = sort,
+                        order = order,
+                        saveDefault = requireContext().prefs().getBoolean(C.SORT_DEFAULT_FOLLOWED_CHANNELS, false)
+                    ))
+                }
+            }
         }
     }
 
     override fun onChange(sort: Sort, sortText: CharSequence, order: Order, orderText: CharSequence, saveDefault: Boolean) {
-        adapter.submitList(null)
+        //adapter.submitList(null)
         viewModel.filter(
+            context = requireContext(),
             sort = sort,
             order = order,
             text = getString(R.string.sort_and_order, sortText, orderText),
@@ -66,7 +60,12 @@ class FollowedChannelsFragment : PagedListFragment<Follow, FollowedChannelsViewM
         )
     }
 
-    override fun scrollToTop() {
-        recyclerView?.scrollToPosition(0)
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -20,11 +20,11 @@ import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.di.Injectable
 import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.ui.common.AlertDialogFragment
+import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
@@ -37,13 +37,12 @@ import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
-import kotlinx.android.synthetic.main.view_chat.view.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
 @Suppress("PLUGIN_WARNING")
-abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, LifecycleListener, SlidingLayout.Listener, FollowFragment, SleepTimerDialog.OnSleepTimerStartedListener, AlertDialogFragment.OnDialogResultListener {
+abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, SlidingLayout.Listener, FollowFragment, SleepTimerDialog.OnSleepTimerStartedListener {
 
     lateinit var slidingLayout: SlidingLayout
     private lateinit var playerView: CustomPlayerView
@@ -168,7 +167,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
                 visible()
                 text = channelName
                 setOnClickListener {
-                    activity.viewChannel(channelId, channelLogin, channelName, channelImage, this@BasePlayerFragment is OfflinePlayerFragment)
+                    findNavController().navigate(ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                        channelId = channelId,
+                        channelLogin = channelLogin,
+                        channelName = channelName,
+                        channelLogo = channelImage,
+                        updateLocal = this@BasePlayerFragment is OfflinePlayerFragment
+                    ))
                     slidingLayout.minimize()
                 }
             }
@@ -245,7 +250,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
             chatLayout.clearFocus()
             initLayout()
         }
-        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.dismiss()
+        //(childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.dismiss()
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
@@ -273,16 +278,17 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
                 playerView.showController()
             }
         }
-        if (this !is OfflinePlayerFragment && prefs.getBoolean(C.PLAYER_FOLLOW, true) && (requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
-            initializeFollow(
-                fragment = this,
-                viewModel = (viewModel as FollowViewModel),
-                followButton = view.findViewById(R.id.playerFollow),
-                setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                user = User.get(activity),
-                helixClientId = prefs.getString(C.HELIX_CLIENT_ID, ""),
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "")
-            )
+        if (this !is OfflinePlayerFragment && prefs.getBoolean(C.PLAYER_FOLLOW, true)) {
+            (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0).let { setting ->
+                if (setting < 2) {
+                    initializeFollow(
+                        fragment = this,
+                        viewModel = (viewModel as FollowViewModel),
+                        followButton = view.findViewById(R.id.playerFollow),
+                        setting = setting
+                    )
+                }
+            }
         }
         if (this !is ClipPlayerFragment) {
             viewModel.sleepTimer.observe(viewLifecycleOwner) {
@@ -325,9 +331,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
         }
     }
 
-    override fun onClose() {
-
-    }
+    override fun onClose() {}
 
     override fun onSleepTimerChanged(durationMs: Long, hours: Int, minutes: Int, lockScreen: Boolean) {
         val context = requireContext()
@@ -346,14 +350,6 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
         viewModel.setTimer(durationMs)
     }
 
-    override fun onDialogResult(requestCode: Int, resultCode: Int) {
-        when (requestCode) {
-            REQUEST_FOLLOW -> {
-                //TODO
-            }
-        }
-    }
-
     //    abstract fun play(obj: Parcelable) //TODO instead maybe add livedata in mainactivity and observe it
 
     fun isSleepTimerActive(): Boolean {
@@ -367,11 +363,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
     }
 
     fun showSleepTimerDialog() {
-        SleepTimerDialog.show(childFragmentManager, viewModel.timerTimeLeft)
+        findNavController().navigate(SleepTimerDialogDirections.actionGlobalSleepTimerDialog(
+            timeLeft = viewModel.timerTimeLeft
+        ))
     }
 
     fun showVolumeDialog() {
-        FragmentUtils.showPlayerVolumeDialog(childFragmentManager)
+        //FragmentUtils.showPlayerVolumeDialog(childFragmentManager)
     }
 
     fun minimize() {
@@ -471,7 +469,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
         if (messageView?.isVisible == true) {
             chatLayout.hideKeyboard()
             chatLayout.clearFocus()
-            chatLayout.viewPager.gone() // emote menu
+            (this as? StreamPlayerFragment)?.hideEmotesMenu()
             messageView.gone()
             prefs.edit { putBoolean(C.KEY_CHAT_BAR_VISIBLE, false) }
         } else {
@@ -523,9 +521,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
         if ((requireContext().getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive) {
             try {
                 (requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager).lockNow()
-            } catch (e: SecurityException) {
-
-            }
+            } catch (e: SecurityException) {}
         }
     }
 
@@ -535,9 +531,5 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), Injectable, Lifecycle
 
     fun isPaused(): Boolean {
         return viewModel.isPaused()
-    }
-
-    private companion object {
-        const val REQUEST_FOLLOW = 0
     }
 }

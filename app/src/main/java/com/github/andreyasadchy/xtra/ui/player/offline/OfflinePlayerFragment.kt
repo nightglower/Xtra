@@ -1,26 +1,29 @@
 package com.github.andreyasadchy.xtra.ui.player.offline
 
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
-import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerOfflineBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
-import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
-import com.github.andreyasadchy.xtra.ui.player.PlayerMode
-import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
-import com.github.andreyasadchy.xtra.ui.player.PlayerVolumeDialog
+import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragmentDirections
+import com.github.andreyasadchy.xtra.ui.player.*
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.visible
 
 class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnSortOptionChanged, PlayerSettingsDialog.PlayerSettingsListener, PlayerVolumeDialog.PlayerVolumeListener {
-//    override fun play(obj: Parcelable) {
-//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//    }
 
-    override val viewModel by viewModels<OfflinePlayerViewModel> { viewModelFactory }
+    private var _binding: FragmentPlayerOfflineBinding? = null
+    private val binding get() = _binding!!
+    private val args: OfflinePlayerFragmentArgs by navArgs()
+    override val viewModel: OfflinePlayerViewModel by viewModels()
+
     private lateinit var video: OfflineVideo
     override val channelId: String?
         get() = video.channelId
@@ -44,7 +47,12 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
     override fun onCreate(savedInstanceState: Bundle?) {
         enableNetworkCheck = false
         super.onCreate(savedInstanceState)
-        video = requireArguments().getParcelable(KEY_VIDEO)!!
+        video = args.offlineVideo
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerOfflineBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun initialize() {
@@ -56,13 +64,22 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
         if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
             settings.visible()
             settings.setOnClickListener {
-                FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, viewModel.qualities, viewModel.qualityIndex)
+                findNavController().navigate(RadioButtonDialogFragmentDirections.actionGlobalRadioButtonDialogFragment(
+                    requestCode = 0,
+                    labels = viewModel.qualities.toTypedArray(),
+                    checkedIndex = viewModel.qualityIndex
+                ))
             }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, viewModel.qualities, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed)
+                findNavController().navigate(PlayerSettingsDialogDirections.actionGlobalPlayerSettingsDialog(
+                    qualities = viewModel.qualities.toTypedArray(),
+                    qualityIndex = viewModel.qualityIndex,
+                    speed = viewModel.currentPlayer.value!!.playbackParameters.speed,
+                    vodGames = false
+                ))
             }
         }
         if (prefs.getBoolean(C.PLAYER_MODE, false)) {
@@ -109,11 +126,8 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
         viewModel.startAudioOnly()
     }
 
-    companion object {
-        private const val KEY_VIDEO = "video"
-
-        fun newInstance(video: OfflineVideo): OfflinePlayerFragment {
-            return OfflinePlayerFragment().apply { arguments = bundleOf(KEY_VIDEO to video) }
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

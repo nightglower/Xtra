@@ -10,15 +10,16 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.VideoDownloadInfo
 import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Bookmark
+import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.BookmarksRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.HlsPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
@@ -32,15 +33,18 @@ import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.upstream.HttpDataSource
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
+@HiltViewModel
 class VideoPlayerViewModel @Inject constructor(
-    context: Application,
+    @ApplicationContext context: Context,
     private val playerRepository: PlayerRepository,
-    repository: TwitchService,
+    repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository,
     private val bookmarksRepository: BookmarksRepository) : HlsPlayerViewModel(context, repository, localFollowsChannel) {
 
@@ -88,7 +92,6 @@ class VideoPlayerViewModel @Inject constructor(
                         gamesList.postValue(get!!)
                     }
                 } catch (e: Exception) {
-                    _errors.postValue(e)
                 } finally {
                     isLoading = false
                 }
@@ -164,7 +167,7 @@ class VideoPlayerViewModel @Inject constructor(
         if (playerMode.value != PlayerMode.AUDIO_ONLY) {
             playbackPosition = player.currentPosition
         }
-        val context = getApplication<Application>()
+        val context = XtraApp.INSTANCE.applicationContext
         if (!userLeaveHint && !isPaused() && playerMode.value == PlayerMode.NORMAL && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
             startAudioOnly(true)
         } else {
@@ -177,7 +180,7 @@ class VideoPlayerViewModel @Inject constructor(
         if (error2 != null) {
             if (error2.type == ExoPlaybackException.TYPE_SOURCE &&
                 error2.sourceException.let { it is HttpDataSource.InvalidResponseCodeException && it.responseCode == 403 }) {
-                val context = getApplication<Application>()
+                val context = XtraApp.INSTANCE.applicationContext
                 context.toast(R.string.video_subscribers_only)
             } else {
                 super.onPlayerError(error)
@@ -237,7 +240,7 @@ class VideoPlayerViewModel @Inject constructor(
                 } catch (e: Exception) {
 
                 }
-                val userTypes = video.channelId?.let { repository.loadUserTypes(mutableListOf(it), helixClientId, helixToken, gqlClientId) }?.first()
+                val userTypes = video.channelId?.let { repository.loadUserTypes(listOf(it), helixClientId, helixToken, gqlClientId) }?.first()
                 val downloadedThumbnail = File(context.filesDir.toString() + File.separator + "thumbnails" + File.separator + "${video.id}.png").absolutePath
                 val downloadedLogo = File(context.filesDir.toString() + File.separator + "profile_pics" + File.separator + "${video.channelId}.png").absolutePath
                 bookmarksRepository.saveBookmark(

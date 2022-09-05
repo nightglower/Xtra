@@ -1,16 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.player.stream
 
-import android.app.Application
+import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.player.lowlatency.DefaultHlsPlaylistParserFactory
+import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.HlsPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode.*
@@ -22,6 +23,8 @@ import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -29,11 +32,12 @@ import javax.inject.Inject
 
 var stream_id: String? = null
 
+@HiltViewModel
 class StreamPlayerViewModel @Inject constructor(
-    context: Application,
+    @ApplicationContext context: Context,
     private val playerRepository: PlayerRepository,
     private val gql: GraphQLRepository,
-    repository: TwitchService,
+    repository: ApiRepository,
     localFollowsChannel: LocalFollowChannelRepository) : HlsPlayerViewModel(context, repository, localFollowsChannel) {
 
     private val _stream = MutableLiveData<Stream?>()
@@ -163,7 +167,7 @@ class StreamPlayerViewModel @Inject constructor(
 
     override fun onPause() {
         isResumed = false
-        val context = getApplication<Application>()
+        val context = XtraApp.INSTANCE.applicationContext
         if (!userLeaveHint && !isPaused() && playerMode.value == NORMAL && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
             startAudioOnly(true)
         } else {
@@ -188,7 +192,7 @@ class StreamPlayerViewModel @Inject constructor(
                         if (result.second) {
                             httpDataSourceFactory.setDefaultRequestProperties(hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
                         } else {
-                            val context = getApplication<Application>()
+                            val context = XtraApp.INSTANCE.applicationContext
                             context.toast(R.string.adblock_not_working)
                         }
                     }
@@ -201,7 +205,7 @@ class StreamPlayerViewModel @Inject constructor(
                     play()
                 }
             } catch (e: Exception) {
-                val context = getApplication<Application>()
+                val context = XtraApp.INSTANCE.applicationContext
                 context.toast(R.string.error_stream)
             }
         }

@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/fragment_games"
+        android:id="@+id/gamesFragment"
         android:icon="@drawable/ic_games_black_24dp"
         android:title="@string/games" />
     <item
-        android:id="@+id/fragment_top"
+        android:id="@+id/streamsFragment"
         android:icon="@drawable/ic_trending_up_black_24dp"
         android:title="@string/popular" />
     <item
-        android:id="@+id/fragment_follow"
+        android:id="@+id/followFragment"
         android:icon="@drawable/ic_favorite_black_24dp"
         android:title="@string/following" />
     <item
-        android:id="@+id/fragment_downloads"
+        android:id="@+id/savedFragment"
         android:icon="@drawable/ic_file_download_black_24dp"
         android:title="@string/saved" />
 </menu>

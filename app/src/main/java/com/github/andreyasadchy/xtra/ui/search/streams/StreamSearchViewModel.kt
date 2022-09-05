@@ -1,46 +1,56 @@
 package com.github.andreyasadchy.xtra.ui.search.streams
 
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
-import com.github.andreyasadchy.xtra.util.nullIfEmpty
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.apollographql.apollo3.ApolloClient
+import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.repository.datasource.SearchStreamsDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
+@HiltViewModel
 class StreamSearchViewModel @Inject constructor(
-        private val repository: TwitchService) : PagedListViewModel<Stream>() {
+    @ApplicationContext context: Context,
+    private val helix: HelixApi,
+    private val apolloClient: ApolloClient) : ViewModel() {
 
-    private val query = MutableLiveData<String>()
-    private var helixClientId = MutableLiveData<String>()
-    private var helixToken = MutableLiveData<String>()
-    private var gqlClientId = MutableLiveData<String>()
-    private var apiPref = MutableLiveData<ArrayList<Pair<Long?, String?>?>>()
-    private var thumbnailsEnabled = MutableLiveData<Boolean>()
-    override val result: LiveData<Listing<Stream>> = Transformations.map(query) {
-        repository.loadSearchStreams(it, helixClientId.value?.nullIfEmpty(), helixToken.value?.nullIfEmpty(), gqlClientId.value?.nullIfEmpty(), apiPref.value, thumbnailsEnabled.value, viewModelScope)
+    val compactAdapter = context.prefs().getBoolean(C.COMPACT_STREAMS, false)
+
+    private val query = MutableStateFlow("")
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = query.flatMapLatest { query ->
+        Pager(
+            if (compactAdapter) {
+                PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+            } else {
+                PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
+            }
+        ) {
+            SearchStreamsDataSource(
+                query = query,
+                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, ""),
+                helixToken = User.get(context).helixToken,
+                helixApi = helix,
+                gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, ""),
+                apolloClient = apolloClient,
+                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_STREAMS, ""), TwitchApiHelper.searchStreamsApiDefaults))
+        }.flow.cachedIn(viewModelScope)
     }
 
-    fun setQuery(query: String, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean = true) {
-        if (this.helixClientId.value != helixClientId) {
-            this.helixClientId.value = helixClientId
-        }
-        if (this.helixToken.value != helixToken) {
-            this.helixToken.value = helixToken
-        }
-        if (this.gqlClientId.value != gqlClientId) {
-            this.gqlClientId.value = gqlClientId
-        }
-        if (this.apiPref.value != apiPref) {
-            this.apiPref.value = apiPref
-        }
-        if (this.thumbnailsEnabled.value != thumbnailsEnabled) {
-            this.thumbnailsEnabled.value = thumbnailsEnabled
-        }
+    fun setQuery(query: String) {
         if (this.query.value != query) {
             this.query.value = query
         }

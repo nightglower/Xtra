@@ -19,10 +19,8 @@ import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.model.offline.Downloadable
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.model.offline.Request
-import com.github.andreyasadchy.xtra.ui.download.BaseDownloadDialog.Storage
 import com.github.andreyasadchy.xtra.ui.download.DownloadService
 import com.github.andreyasadchy.xtra.ui.download.DownloadService.Companion.KEY_REQUEST
-import com.github.andreyasadchy.xtra.ui.download.DownloadService.Companion.KEY_WIFI
 import java.io.File
 import java.io.FileOutputStream
 
@@ -31,10 +29,9 @@ object DownloadUtils {
     val isExternalStorageAvailable: Boolean
         get() = Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED
 
-    fun download(context: Context, request: Request, wifiOnly: Boolean = false) {
+    fun download(context: Context, request: Request) {
         val intent = Intent(context, DownloadService::class.java)
                 .putExtra(KEY_REQUEST, request)
-                .putExtra(KEY_WIFI, wifiOnly)
         context.startService(intent)
         DownloadService.activeRequests.add(request.offlineVideoId)
     }
@@ -158,4 +155,9 @@ object DownloadUtils {
 
         }
     }
+
+    data class Storage(
+        val id: Int,
+        val name: String,
+        val path: String)
 }

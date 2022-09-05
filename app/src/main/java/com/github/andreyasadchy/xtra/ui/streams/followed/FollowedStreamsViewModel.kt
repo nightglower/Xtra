@@ -1,38 +1,51 @@
 package com.github.andreyasadchy.xtra.ui.streams.followed
 
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.stream.Stream
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.apollographql.apollo3.ApolloClient
+import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
+import com.github.andreyasadchy.xtra.repository.datasource.FollowedStreamsDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
+@HiltViewModel
 class FollowedStreamsViewModel @Inject constructor(
-        private val repository: TwitchService) : PagedListViewModel<Stream>() {
+    @ApplicationContext context: Context,
+    private val localFollowsChannel: LocalFollowChannelRepository,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    private val apolloClient: ApolloClient) : ViewModel() {
 
-    private val filter = MutableLiveData<Filter>()
-    override val result: LiveData<Listing<Stream>> = Transformations.map(filter) {
-        repository.loadFollowedStreams(it.userId, it.helixClientId, it.helixToken, it.gqlClientId, it.gqlToken, it.apiPref, it.thumbnailsEnabled, viewModelScope)
-    }
+    val compactAdapter = context.prefs().getBoolean(C.COMPACT_STREAMS, false)
 
-    fun loadStreams(userId: String? = null, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, gqlToken: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>, thumbnailsEnabled: Boolean) {
-        Filter(userId, helixClientId, helixToken, gqlClientId, gqlToken, apiPref, thumbnailsEnabled).let {
-            if (filter.value != it) {
-                filter.value = it
-            }
+    val flow = Pager(
+        if (compactAdapter) {
+            PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
+        } else {
+            PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
         }
-    }
-
-    private data class Filter(
-        val userId: String?,
-        val helixClientId: String?,
-        val helixToken: String?,
-        val gqlClientId: String?,
-        val gqlToken: String?,
-        val apiPref: ArrayList<Pair<Long?, String?>?>,
-        val thumbnailsEnabled: Boolean)
+    ) {
+        FollowedStreamsDataSource(
+            localFollowsChannel = localFollowsChannel,
+            userId = User.get(context).id,
+            helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, ""),
+            helixToken = User.get(context).helixToken,
+            helixApi = helix,
+            gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, ""),
+            gqlToken = User.get(context).gqlToken,
+            gqlApi = graphQLRepository,
+            apolloClient = apolloClient,
+            apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_FOLLOWED_STREAMS, ""), TwitchApiHelper.followedStreamsApiDefaults))
+    }.flow.cachedIn(viewModelScope)
 }

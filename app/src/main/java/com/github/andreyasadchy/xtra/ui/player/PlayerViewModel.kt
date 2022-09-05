@@ -1,6 +1,5 @@
 package com.github.andreyasadchy.xtra.ui.player
 
-import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -10,10 +9,10 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.ui.common.BaseAndroidViewModel
 import com.github.andreyasadchy.xtra.ui.common.OnQualityChangeListener
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
 import com.github.andreyasadchy.xtra.util.*
@@ -31,7 +30,7 @@ import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.concurrent.schedule
 
-abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(context), Player.Listener, OnQualityChangeListener {
+abstract class PlayerViewModel(context: Context) : ViewModel(), Player.Listener, OnQualityChangeListener {
 
     protected val tag: String = javaClass.simpleName
 
@@ -187,7 +186,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
         val error2 = player.playerError
         Log.e(tag, "Player error", error2)
         playbackPosition = player.currentPosition
-        val context = getApplication<Application>()
+        val context = XtraApp.INSTANCE.applicationContext
         if (context.isNetworkAvailable) {
             try {
                 val isStreamEnded = try {

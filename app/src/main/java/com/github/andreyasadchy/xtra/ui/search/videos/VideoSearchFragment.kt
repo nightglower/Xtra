@@ -5,51 +5,61 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
+import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.Searchable
+import com.github.andreyasadchy.xtra.ui.search.channels.ChannelSearchAdapter
+import com.github.andreyasadchy.xtra.ui.search.channels.ChannelSearchViewModel
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
+import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import dagger.hilt.android.AndroidEntryPoint
 
-class VideoSearchFragment : BaseVideosFragment<VideoSearchViewModel>(), Searchable {
+@AndroidEntryPoint
+class VideoSearchFragment : BaseVideosFragment(), Searchable {
 
-    override val viewModel by viewModels<VideoSearchViewModel> { viewModelFactory }
+    private val viewModel: VideoSearchViewModel by viewModels()
+    private lateinit var pagingAdapter: VideosAdapter
 
-    override val adapter: BaseVideosAdapter by lazy {
-        val activity = requireActivity() as MainActivity
-        VideoSearchAdapter(this, activity, activity, activity, {
+    override fun initialize() {
+        pagingAdapter = VideosAdapter(this, requireActivity() as MainActivity, {
             lastSelectedItem = it
             showDownloadDialog()
         }, {
             lastSelectedItem = it
             viewModel.saveBookmark(requireContext(), it)
         })
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.common_recycler_view_layout, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        swipeRefresh.isEnabled = false
+        with(binding) {
+            recyclerViewLayout.swipeRefresh.isEnabled = false
+            init(recyclerViewLayout, pagingAdapter, viewModel.flow)
+            if (requireContext().prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) {
+                viewModel.positions.observe(viewLifecycleOwner) {
+                    pagingAdapter.setVideoPositions(it)
+                }
+            }
+            viewModel.bookmarks.observe(viewLifecycleOwner) {
+                pagingAdapter.setBookmarksList(it)
+            }
+        }
     }
 
     override fun search(query: String) {
         if (query.isNotEmpty()) {
-            viewModel.setQuery(
-                query = query,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-                apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_SEARCH_VIDEOS, ""), TwitchApiHelper.searchVideosApiDefaults)
-            )
+            viewModel.setQuery(query = query)
         } else {
-            adapter.submitList(null)
-            nothingHere?.gone()
+            binding.recyclerViewLayout.nothingHere.gone()
         }
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
     }
 }

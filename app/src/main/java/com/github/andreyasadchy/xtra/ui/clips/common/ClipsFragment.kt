@@ -1,93 +1,124 @@
 package com.github.andreyasadchy.xtra.ui.clips.common
 
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.databinding.FragmentStreamsBinding
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.BroadcastType
 import com.github.andreyasadchy.xtra.model.helix.video.Period
 import com.github.andreyasadchy.xtra.model.helix.video.Sort
-import com.github.andreyasadchy.xtra.ui.clips.BaseClipsFragment
 import com.github.andreyasadchy.xtra.ui.clips.ClipsAdapter
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
+import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowFragment
+import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialogDirections
+import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog
+import com.github.andreyasadchy.xtra.ui.videos.VideosSortDialogDirections
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
-import kotlinx.android.synthetic.main.fragment_clips.*
-import kotlinx.android.synthetic.main.fragment_media.*
-import kotlinx.android.synthetic.main.sort_bar.*
+import dagger.hilt.android.AndroidEntryPoint
 
-class ClipsFragment : BaseClipsFragment<ClipsViewModel>(), VideosSortDialog.OnFilter, FollowFragment {
+@AndroidEntryPoint
+class ClipsFragment : PagedListFragment(), VideosSortDialog.OnFilter, HasDownloadDialog, FollowFragment {
 
-    override val viewModel by viewModels<ClipsViewModel> { viewModelFactory }
-    override val adapter: BasePagedListAdapter<Clip> by lazy {
-        val activity = requireActivity() as MainActivity
-        val showDialog: (Clip) -> Unit = {
-            lastSelectedItem = it
-            showDownloadDialog()
-        }
-        if (arguments?.getString(C.CHANNEL_ID) != null || arguments?.getString(C.CHANNEL_LOGIN) != null) {
-            ChannelClipsAdapter(this, activity, activity, showDialog)
-        } else {
-            ClipsAdapter(this, activity, activity, activity, showDialog)
-        }
+    interface OnClipSelectedListener {
+        fun startClip(clip: Clip)
+    }
+
+    private var _binding: FragmentStreamsBinding? = null
+    private val binding get() = _binding!!
+    private val args: ClipsFragmentArgs by navArgs()
+    private val viewModel: ClipsViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Clip, out RecyclerView.ViewHolder>
+
+    var lastSelectedItem: Clip? = null
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentStreamsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun initialize() {
-        super.initialize()
-        viewModel.sortText.observe(viewLifecycleOwner) {
-            sortText.text = it
+        pagingAdapter = if (args.channelId != null || args.channelLogin != null) {
+            ChannelClipsAdapter(this, requireActivity() as MainActivity) {
+                lastSelectedItem = it
+                showDownloadDialog()
+            }
+        } else {
+            ClipsAdapter(this, requireActivity() as MainActivity) {
+                lastSelectedItem = it
+                showDownloadDialog()
+            }
         }
-        viewModel.loadClips(
-            context = requireContext(),
-            channelId = arguments?.getString(C.CHANNEL_ID),
-            channelLogin = arguments?.getString(C.CHANNEL_LOGIN),
-            gameId = arguments?.getString(C.GAME_ID),
-            gameName = arguments?.getString(C.GAME_NAME),
-            helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-            helixToken = User.get(requireContext()).helixToken,
-            gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, ""),
-            channelApiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_CHANNEL_CLIPS, ""), TwitchApiHelper.channelClipsApiDefaults),
-            gameApiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_GAME_CLIPS, ""), TwitchApiHelper.gameClipsApiDefaults)
-        )
-        sortBar.visible()
-        sortBar.setOnClickListener {
-            VideosSortDialog.newInstance(
-                period = viewModel.period,
-                languageIndex = viewModel.languageIndex,
-                clipChannel = arguments?.getString(C.CHANNEL_ID) != null,
-                saveSort = viewModel.saveSort,
-                saveDefault = if (adapter is ClipsAdapter) requireContext().prefs().getBoolean(C.SORT_DEFAULT_GAME_CLIPS, false) else requireContext().prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, false)
-            ).show(childFragmentManager, null)
-        }
-        val activity = requireActivity() as MainActivity
-        if (adapter is ClipsAdapter && (requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
-            parentFragment?.followGame?.let {
-                initializeFollow(
-                    fragment = this,
-                    viewModel = viewModel,
-                    followButton = it,
-                    setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0,
-                    user = User.get(activity),
-                    helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, ""),
-                    gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "")
-                )
+        with(binding) {
+            viewModel.loadClips(requireContext())
+            init(recyclerViewLayout, pagingAdapter, viewModel.flow)
+            viewModel.sortText.observe(viewLifecycleOwner) {
+                sortBar.sortText.text = it
+            }
+            sortBar.root.visible()
+            sortBar.root.setOnClickListener {
+                with(viewModel.filter.value) {
+                    findNavController().navigate(VideosSortDialogDirections.actionGlobalVideosSortDialog(
+                        period = period,
+                        languageIndex = languageIndex,
+                        clipChannel = args.channelId != null,
+                        saveSort = saveSort,
+                        saveDefault = if (pagingAdapter is ClipsAdapter) requireContext().prefs().getBoolean(C.SORT_DEFAULT_GAME_CLIPS, false) else requireContext().prefs().getBoolean(C.SORT_DEFAULT_CHANNEL_CLIPS, false)
+                    ))
+                }
+            }
+            if (pagingAdapter is ClipsAdapter) {
+                (requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0).let { setting ->
+                    if (setting < 2) {
+                        /*parentFragment?.followGame?.let {
+                            initializeFollow(
+                                fragment = this@ClipsFragment,
+                                viewModel = viewModel,
+                                followButton = it,
+                                setting = setting
+                            )
+                        }*/
+                    }
+                }
             }
         }
     }
 
     override fun onChange(sort: Sort, sortText: CharSequence, period: Period, periodText: CharSequence, type: BroadcastType, languageIndex: Int, saveSort: Boolean, saveDefault: Boolean) {
-        adapter.submitList(null)
+        //adapter.submitList(null)
         viewModel.filter(
+            context = requireContext(),
             period = period,
             languageIndex = languageIndex,
             text = getString(R.string.sort_and_period, sortText, periodText),
             saveSort = saveSort,
             saveDefault = saveDefault
         )
+    }
+
+    override fun showDownloadDialog() {
+        lastSelectedItem?.let {
+            findNavController().navigate(ClipDownloadDialogDirections.actionGlobalClipDownloadDialog(clip = it))
+        }
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

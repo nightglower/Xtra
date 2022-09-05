@@ -5,30 +5,20 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.LinearLayout
+import androidx.core.widget.NestedScrollView
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.game.Game
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
-import com.github.andreyasadchy.xtra.ui.player.games.PlayerGamesFragment
-import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.ui.view.GridRecyclerView
 
 
 class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
 
+    private val args: PlayerGamesDialogArgs by navArgs()
+
     interface PlayerSeekListener {
         fun seek(position: Long)
-    }
-
-    companion object {
-
-        fun newInstance(gamesList: List<Game>): PlayerGamesDialog {
-            return PlayerGamesDialog().apply {
-                arguments = Bundle().apply {
-                    putParcelableArrayList(C.GAMES_LIST, ArrayList(gamesList))
-                }
-            }
-        }
     }
 
     lateinit var listener: PlayerSeekListener
@@ -38,21 +28,17 @@ class PlayerGamesDialog : ExpandingBottomSheetDialogFragment() {
         listener = parentFragment as PlayerSeekListener
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val context = requireContext()
         val layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        val frameLayout = FrameLayout(context).apply {
-            id = R.id.fragmentContainer
+        val recycleView = GridRecyclerView(context).apply {
+            id = R.id.recyclerView
             setLayoutParams(layoutParams)
+            adapter = PlayerGamesDialogAdapter(this@PlayerGamesDialog, args.games)
         }
-        return frameLayout
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        childFragmentManager.beginTransaction().replace(R.id.fragmentContainer, PlayerGamesFragment().also { it.arguments = requireArguments() }).commit()
+        return NestedScrollView(context).apply { addView(recycleView) }
     }
 }

@@ -11,28 +11,33 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.RecyclerView
-import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentEmotesBinding
 import com.github.andreyasadchy.xtra.model.chat.Emote
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatViewModel
 import com.github.andreyasadchy.xtra.ui.view.GridAutofitLayoutManager
 import com.github.andreyasadchy.xtra.util.convertDpToPixels
+import dagger.hilt.android.AndroidEntryPoint
 
 
+@AndroidEntryPoint
 class EmotesFragment : Fragment() {
 
     private lateinit var listener: (Emote) -> Unit
     private lateinit var layoutManager: GridAutofitLayoutManager
 
-    private val viewModel by viewModels<ChatViewModel>(ownerProducer = { requireParentFragment() })
+    private var _binding: FragmentEmotesBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: ChatViewModel by viewModels()
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
         listener = (requireParentFragment() as ChatFragment)::appendEmote
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_emotes, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentEmotesBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -13,23 +13,25 @@ import com.github.andreyasadchy.xtra.model.NotValidated
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.Video
+import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.Event
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
 import com.github.andreyasadchy.xtra.util.toast
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import javax.inject.Inject
 
+@HiltViewModel
 class MainViewModel @Inject constructor(
-        application: Application,
-        private val repository: TwitchService,
-        private val authRepository: AuthRepository,
-        private val offlineRepository: OfflineRepository) : ViewModel() {
+    application: Application,
+    private val repository: ApiRepository,
+    private val authRepository: AuthRepository,
+    private val offlineRepository: OfflineRepository) : ViewModel() {
 
     private val _isNetworkAvailable = MutableLiveData<Event<Boolean>>()
     val isNetworkAvailable: LiveData<Event<Boolean>>
@@ -52,7 +54,7 @@ class MainViewModel @Inject constructor(
         get() = _user
 
     init {
-        offlineRepository.resumeDownloads(application, false)
+        offlineRepository.resumeDownloads(application)
     }
 
     fun onMaximize() {

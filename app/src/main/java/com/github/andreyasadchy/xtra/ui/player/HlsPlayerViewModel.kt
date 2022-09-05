@@ -1,13 +1,14 @@
 package com.github.andreyasadchy.xtra.ui.player
 
-import android.app.Application
+import android.content.Context
 import androidx.core.content.edit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowLiveData
 import com.github.andreyasadchy.xtra.ui.common.follow.FollowViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode.AUDIO_ONLY
@@ -25,8 +26,8 @@ import java.util.regex.Pattern
 private const val VIDEO_RENDERER = 0
 
 abstract class HlsPlayerViewModel(
-    context: Application,
-    val repository: TwitchService,
+    context: Context,
+    val repository: ApiRepository,
     private val localFollowsChannel: LocalFollowChannelRepository) : PlayerViewModel(context), FollowViewModel {
 
     protected val helper = PlayerHelper()
@@ -48,7 +49,7 @@ abstract class HlsPlayerViewModel(
             updateVideoQuality()
             qualities[index]
         }
-        val context = getApplication<Application>()
+        val context = XtraApp.INSTANCE.applicationContext
         if (context.prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved") == "saved") {
             context.prefs().edit { putString(C.PLAYER_QUALITY, quality) }
         }
@@ -76,7 +77,7 @@ abstract class HlsPlayerViewModel(
     override fun onTracksChanged(tracks: Tracks) {
         if (trackSelector.currentMappedTrackInfo != null) {
             if (helper.loaded.value != true) {
-                val context = getApplication<Application>()
+                val context = XtraApp.INSTANCE.applicationContext
                 val defaultQuality = context.prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved")
                 val savedQuality = context.prefs().getString(C.PLAYER_QUALITY, "720p60")
                 val index = when (defaultQuality) {
@@ -118,7 +119,7 @@ abstract class HlsPlayerViewModel(
         val manifest = player.currentManifest
         if (helper.urls.isEmpty() && manifest is HlsManifest) {
             manifest.masterPlaylist.let {
-                val context = getApplication<Application>()
+                val context = XtraApp.INSTANCE.applicationContext
                 val tags = it.tags
                 val urls = LinkedHashMap<String, String>(tags.size)
                 val audioOnly = context.getString(R.string.audio_only)
@@ -149,7 +150,7 @@ abstract class HlsPlayerViewModel(
 
     override fun setUser(user: User, helixClientId: String?, gqlClientId: String?, setting: Int) {
         if (!this::follow.isInitialized) {
-            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, user = user, gqlClientId = gqlClientId, setting = setting, viewModelScope = viewModelScope)
+            follow = FollowLiveData(localFollowsChannel = localFollowsChannel, repository = repository, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, user = user, helixClientId = helixClientId, gqlClientId = gqlClientId, setting = setting, viewModelScope = viewModelScope)
         }
     }
 

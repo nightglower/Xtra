@@ -5,65 +5,90 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.get
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentSearchBinding
 import com.github.andreyasadchy.xtra.ui.Utils
-import com.github.andreyasadchy.xtra.ui.common.pagers.MediaPagerFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
+import com.github.andreyasadchy.xtra.ui.search.channels.ChannelSearchFragment
+import com.github.andreyasadchy.xtra.ui.search.games.GameSearchFragment
+import com.github.andreyasadchy.xtra.ui.search.streams.StreamSearchFragment
+import com.github.andreyasadchy.xtra.ui.search.videos.VideoSearchFragment
 import com.github.andreyasadchy.xtra.util.showKeyboard
-import kotlinx.android.synthetic.main.fragment_search.*
+import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
-class SearchFragment : MediaPagerFragment() {
+class SearchFragment : Fragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_search, container, false)
+    private var _binding: FragmentSearchBinding? = null
+    private val binding get() = _binding!!
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentSearchBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val activity = requireActivity() as MainActivity
-        val adapter = SearchPagerAdapter(activity, childFragmentManager).apply {
-            setOnItemChangedListener {
-                if (it.isResumed) {
-                    (it as Searchable).search(search.query.toString())
+        with(binding) {
+            val activity = requireActivity() as MainActivity
+            pagerLayout.viewPager.adapter = PagerAdapter(this@SearchFragment)
+            TabLayoutMediator(pagerLayout.tabLayout, pagerLayout.viewPager) { tab, position ->
+                tab.text = when (position) {
+                    0 -> getString(R.string.videos)
+                    1 -> getString(R.string.streams)
+                    2 -> getString(R.string.channels)
+                    else -> getString(R.string.games)
                 }
-            }
-        }
-        setAdapter(adapter = adapter, currentItem = 2)
-        toolbar.apply {
-            navigationIcon = Utils.getNavigationIcon(activity)
-            setNavigationOnClickListener { activity.popFragment() }
-        }
-        search.showKeyboard()
-    }
+            }.attach()
+            search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                private var job: Job? = null
 
-    override fun initialize() {
-        search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            private var job: Job? = null
+                override fun onQueryTextSubmit(query: String): Boolean {
+                    (pagerLayout.viewPager[0] as? Searchable)?.search(query)
+                    return false
+                }
 
-            override fun onQueryTextSubmit(query: String): Boolean {
-                (currentFragment as? Searchable)?.search(query)
-                return false
-            }
-
-            override fun onQueryTextChange(newText: String): Boolean {
-                job?.cancel()
-                if (newText.isNotEmpty()) {
-                    job = lifecycleScope.launchWhenResumed {
-                        delay(750)
-                        (currentFragment as? Searchable)?.search(newText)
+                override fun onQueryTextChange(newText: String): Boolean {
+                    job?.cancel()
+                    if (newText.isNotEmpty()) {
+                        job = lifecycleScope.launchWhenResumed {
+                            delay(750)
+                            (pagerLayout.viewPager[0] as? Searchable)?.search(newText)
+                        }
+                    } else {
+                        (pagerLayout.viewPager[0] as? Searchable)?.search(newText) //might be null on rotation, so as?
                     }
-                } else {
-                    (currentFragment as? Searchable)?.search(newText) //might be null on rotation, so as?
+                    return false
                 }
-                return false
+            })
+            toolbar.apply {
+                navigationIcon = Utils.getNavigationIcon(activity)
+                setNavigationOnClickListener { activity.popFragment() }
             }
-        })
+            search.showKeyboard()
+        }
     }
 
-    override fun onNetworkRestored() {
+    private inner class PagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
+        override fun getItemCount(): Int = 4
 
+        override fun createFragment(position: Int): Fragment {
+            return when (position) {
+                0 -> VideoSearchFragment()
+                1 -> StreamSearchFragment()
+                2 -> ChannelSearchFragment()
+                else -> GameSearchFragment()
+            }.also { it.arguments = arguments }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

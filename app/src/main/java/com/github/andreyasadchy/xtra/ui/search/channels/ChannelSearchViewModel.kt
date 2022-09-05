@@ -1,42 +1,53 @@
 package com.github.andreyasadchy.xtra.ui.search.channels
 
-import androidx.core.util.Pair
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import android.content.Context
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.andreyasadchy.xtra.model.helix.channel.ChannelSearch
-import com.github.andreyasadchy.xtra.repository.Listing
-import com.github.andreyasadchy.xtra.repository.TwitchService
-import com.github.andreyasadchy.xtra.ui.common.PagedListViewModel
-import com.github.andreyasadchy.xtra.util.nullIfEmpty
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import com.apollographql.apollo3.ApolloClient
+import com.github.andreyasadchy.xtra.api.HelixApi
+import com.github.andreyasadchy.xtra.model.User
+import com.github.andreyasadchy.xtra.repository.GraphQLRepository
+import com.github.andreyasadchy.xtra.repository.datasource.SearchChannelsDataSource
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.prefs
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
+@HiltViewModel
 class ChannelSearchViewModel @Inject constructor(
-        private val repository: TwitchService) : PagedListViewModel<ChannelSearch>() {
+    @ApplicationContext context: Context,
+    private val graphQLRepository: GraphQLRepository,
+    private val helix: HelixApi,
+    private val apolloClient: ApolloClient) : ViewModel() {
 
-    private val query = MutableLiveData<String>()
-    private var helixClientId = MutableLiveData<String>()
-    private var helixToken = MutableLiveData<String>()
-    private var gqlClientId = MutableLiveData<String>()
-    private var apiPref = MutableLiveData<ArrayList<Pair<Long?, String?>?>>()
-    override val result: LiveData<Listing<ChannelSearch>> = Transformations.map(query) {
-        repository.loadSearchChannels(it, helixClientId.value?.nullIfEmpty(), helixToken.value?.nullIfEmpty(), gqlClientId.value?.nullIfEmpty(), apiPref.value, viewModelScope)
+    private val query = MutableStateFlow("")
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val flow = query.flatMapLatest { query ->
+        Pager(
+            PagingConfig(pageSize = 15, prefetchDistance = 5, initialLoadSize = 15)
+        ) {
+            SearchChannelsDataSource(
+                query = query,
+                helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, ""),
+                helixToken = User.get(context).helixToken,
+                helixApi = helix,
+                gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, ""),
+                gqlApi = graphQLRepository,
+                apolloClient = apolloClient,
+                apiPref = TwitchApiHelper.listFromPrefs(context.prefs().getString(C.API_PREF_SEARCH_CHANNEL, ""), TwitchApiHelper.searchChannelsApiDefaults))
+        }.flow.cachedIn(viewModelScope)
     }
 
-    fun setQuery(query: String, helixClientId: String? = null, helixToken: String? = null, gqlClientId: String? = null, apiPref: ArrayList<Pair<Long?, String?>?>) {
-        if (this.helixClientId.value != helixClientId) {
-            this.helixClientId.value = helixClientId
-        }
-        if (this.helixToken.value != helixToken) {
-            this.helixToken.value = helixToken
-        }
-        if (this.gqlClientId.value != gqlClientId) {
-            this.gqlClientId.value = gqlClientId
-        }
-        if (this.apiPref.value != apiPref) {
-            this.apiPref.value = apiPref
-        }
+    fun setQuery(query: String) {
         if (this.query.value != query) {
             this.query.value = query
         }

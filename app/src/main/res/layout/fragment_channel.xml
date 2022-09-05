@@ -260,22 +260,16 @@
 
                 <ImageButton
                     android:id="@+id/follow"
-                    android:layout_width="35dp"
-                    android:layout_height="35dp"
-                    android:layout_gravity="end"
-                    android:src="@drawable/baseline_favorite_border_black_24"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:layout_marginEnd="7dp"
+                    style="@style/FollowButton"
                     android:visibility="gone"
-                    tools:visibility="visible"
-                    app:tint="?attr/textColor" />
+                    tools:visibility="visible" />
             </androidx.appcompat.widget.Toolbar>
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
     <include
-        android:id="@+id/fragmentContainer"
+        android:id="@+id/pagerLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         layout="@layout/fragment_media_pager"

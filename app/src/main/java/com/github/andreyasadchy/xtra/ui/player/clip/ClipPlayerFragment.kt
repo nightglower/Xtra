@@ -1,33 +1,38 @@
 package com.github.andreyasadchy.xtra.ui.player.clip
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
-import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerClipBinding
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.Video
-import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
-import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialog
+import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragmentDirections
+import com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialogDirections
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
+import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialogDirections
 import com.github.andreyasadchy.xtra.ui.player.PlayerVolumeDialog
 import com.github.andreyasadchy.xtra.util.*
-import kotlinx.android.synthetic.main.fragment_player_clip.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPlayerFragment, RadioButtonDialogFragment.OnSortOptionChanged, PlayerSettingsDialog.PlayerSettingsListener, PlayerVolumeDialog.PlayerVolumeListener {
-//    override fun play(obj: Parcelable) {
-//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//    }
 
-    override val viewModel by viewModels<ClipPlayerViewModel> { viewModelFactory }
+    private var _binding: FragmentPlayerClipBinding? = null
+    private val binding get() = _binding!!
+    private val args: ClipPlayerFragmentArgs by navArgs()
+    override val viewModel: ClipPlayerViewModel by viewModels()
+
     private lateinit var clip: Clip
     override val channelId: String?
         get() = clip.broadcaster_id
@@ -38,7 +43,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
     override val channelImage: String?
         get() = clip.channelLogo
 
-            override val layoutId: Int
+    override val layoutId: Int
         get() = R.layout.fragment_player_clip
     override val chatContainerId: Int
         get() = R.id.clipChatContainer
@@ -50,16 +55,21 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        clip = requireArguments().getParcelable(KEY_CLIP)!!
+        clip = args.clip
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerClipBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
+/*        if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
             childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, clip.video_id, clip.videoOffsetSeconds?.toDouble())).commit()
-        }
+        }*/
         if (clip.video_id.isNullOrBlank()) {
-            watchVideo.gone()
+            binding.watchVideo.gone()
         }
     }
 
@@ -72,18 +82,27 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         viewModel.loaded.observe(this) {
             settings.enable()
             download.enable()
-            (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQualities(viewModel.qualities.keys.toList(), viewModel.qualityIndex)
+            //(childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQualities(viewModel.qualities.keys.toList(), viewModel.qualityIndex)
         }
         if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
             settings.visible()
             settings.setOnClickListener {
-                FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, viewModel.qualities.keys, viewModel.qualityIndex)
+                findNavController().navigate(RadioButtonDialogFragmentDirections.actionGlobalRadioButtonDialogFragment(
+                    requestCode = 0,
+                    labels = viewModel.qualities.keys.toTypedArray(),
+                    checkedIndex = viewModel.qualityIndex
+                ))
             }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, viewModel.qualities.keys, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed)
+                findNavController().navigate(PlayerSettingsDialogDirections.actionGlobalPlayerSettingsDialog(
+                    qualities = viewModel.qualities.keys.toTypedArray(),
+                    qualityIndex = viewModel.qualityIndex,
+                    speed = viewModel.currentPlayer.value!!.playbackParameters.speed,
+                    vodGames = false
+                ))
             }
         }
         if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
@@ -93,7 +112,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
             }
         }
         if (!clip.video_id.isNullOrBlank()) {
-            watchVideo.setOnClickListener {
+            binding.watchVideo.setOnClickListener {
                 (requireActivity() as MainActivity).startVideo(Video(
                     id = clip.video_id!!,
                     user_id = clip.broadcaster_id,
@@ -127,7 +146,11 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
 
     override fun showDownloadDialog() {
         if (DownloadUtils.hasStoragePermission(requireActivity())) {
-            ClipDownloadDialog.newInstance(clip, viewModel.qualities).show(childFragmentManager, null)
+            findNavController().navigate(ClipDownloadDialogDirections.actionGlobalClipDownloadDialog(
+                clip = clip,
+                qualityKeys = viewModel.qualities.keys.toTypedArray(),
+                qualityValues = viewModel.qualities.values.toTypedArray()
+            ))
         }
     }
 
@@ -155,11 +178,8 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         return runBlocking(Dispatchers.Main) { viewModel.currentPlayer.value!!.currentPosition / 1000.0 }
     }
 
-    companion object {
-        private const val KEY_CLIP = "clip"
-
-        fun newInstance(clip: Clip): ClipPlayerFragment {
-            return ClipPlayerFragment().apply { arguments = bundleOf(KEY_CLIP to clip) }
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -10,9 +10,9 @@ import com.bumptech.glide.request.transition.Transition
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowChannel
 import com.github.andreyasadchy.xtra.model.offline.LocalFollowGame
+import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowGameRepository
-import com.github.andreyasadchy.xtra.repository.TwitchService
 import com.github.andreyasadchy.xtra.util.DownloadUtils
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.coroutines.CoroutineScope
@@ -23,14 +23,14 @@ import java.io.File
 class FollowLiveData(
     private val localFollowsChannel: LocalFollowChannelRepository? = null,
     private val localFollowsGame: LocalFollowGameRepository? = null,
+    private val repository: ApiRepository,
     private val userId: String?,
     private val userLogin: String?,
     private val userName: String?,
     private var channelLogo: String?,
-    private val repository: TwitchService,
-    private val helixClientId: String? = null,
     private val user: User,
-    private val gqlClientId: String? = null,
+    private val helixClientId: String?,
+    private val gqlClientId: String?,
     private val setting: Int,
     private val viewModelScope: CoroutineScope) : MutableLiveData<Boolean>()  {
 

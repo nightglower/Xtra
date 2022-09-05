@@ -10,46 +10,25 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.transition.Transition
 import coil.util.DebugLogger
-import com.github.andreyasadchy.xtra.di.AppInjector
-import com.github.andreyasadchy.xtra.util.AppLifecycleObserver
 import com.github.andreyasadchy.xtra.util.LifecycleListener
-import dagger.android.AndroidInjector
-import dagger.android.DispatchingAndroidInjector
-import dagger.android.HasAndroidInjector
+import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 
-class XtraApp : Application(), HasAndroidInjector, ImageLoaderFactory {
+@HiltAndroidApp
+class XtraApp : Application(), ImageLoaderFactory {
 
     companion object {
         lateinit var INSTANCE: Application
     }
 
-    @Inject lateinit var dispatchingAndroidInjector: DispatchingAndroidInjector<Any>
-    private val appLifecycleObserver = AppLifecycleObserver()
-
     override fun onCreate() {
         super.onCreate()
         INSTANCE = this
-        AppInjector.init(this)
-
-        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
     }
 
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
-    }
-
-    override fun androidInjector(): AndroidInjector<Any> {
-        return dispatchingAndroidInjector
-    }
-
-    fun addLifecycleListener(listener: LifecycleListener) {
-        appLifecycleObserver.addListener(listener)
-    }
-
-    fun removeLifecycleListener(listener: LifecycleListener) {
-        appLifecycleObserver.removeListener(listener)
     }
 
     override fun newImageLoader(): ImageLoader {

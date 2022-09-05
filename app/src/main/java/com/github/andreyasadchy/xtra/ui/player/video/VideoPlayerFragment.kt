@@ -1,29 +1,34 @@
 package com.github.andreyasadchy.xtra.ui.player.video
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
-import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerVideoBinding
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.video.Video
-import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
+import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragmentDirections
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
-import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
+import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialogDirections
 import com.github.andreyasadchy.xtra.ui.player.*
 import com.github.andreyasadchy.xtra.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPlayerFragment, RadioButtonDialogFragment.OnSortOptionChanged, PlayerSettingsDialog.PlayerSettingsListener, PlayerVolumeDialog.PlayerVolumeListener, PlayerGamesDialog.PlayerSeekListener {
-//    override fun play(obj: Parcelable) {
-//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//    }
 
-    override val viewModel by viewModels<VideoPlayerViewModel> { viewModelFactory }
+    private var _binding: FragmentPlayerVideoBinding? = null
+    private val binding get() = _binding!!
+    private val args: VideoPlayerFragmentArgs by navArgs()
+    override val viewModel: VideoPlayerViewModel by viewModels()
+
     private lateinit var video: Video
     override val channelId: String?
         get() = video.user_id
@@ -46,14 +51,19 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        video = requireArguments().getParcelable(KEY_VIDEO)!!
+        video = args.video
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerVideoBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
+/*        if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
             childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, video.id, 0.0)).commit()
-        }
+        }*/
     }
 
     override fun initialize() {
@@ -61,7 +71,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             gqlClientId = prefs.getString(C.GQL_CLIENT_ID, ""),
             gqlToken = if (prefs.getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) User.get(requireContext()).gqlToken else null,
             video = video,
-            offset = requireArguments().getDouble(KEY_OFFSET)
+            offset = args.offset.toDouble()
         )
         super.initialize()
         val settings = requireView().findViewById<ImageButton>(R.id.playerSettings)
@@ -73,7 +83,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
             if (it) {
                 settings.enable()
                 download.enable()
-                (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQualities(viewModel.qualities, viewModel.qualityIndex)
+                //(childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setQualities(viewModel.qualities, viewModel.qualityIndex)
             } else {
                 download.disable()
                 settings.disable()
@@ -81,18 +91,27 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         }
         checkBookmark()
         viewModel.bookmarkItem.observe(viewLifecycleOwner) {
-            (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it != null)
+            //(childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(it != null)
         }
         if (prefs.getBoolean(C.PLAYER_SETTINGS, true)) {
             settings.visible()
             settings.setOnClickListener {
-                FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, viewModel.qualities, viewModel.qualityIndex)
+                findNavController().navigate(RadioButtonDialogFragmentDirections.actionGlobalRadioButtonDialogFragment(
+                    requestCode = 0,
+                    labels = viewModel.qualities.toTypedArray(),
+                    checkedIndex = viewModel.qualityIndex
+                ))
             }
         }
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, if (viewModel.loaded.value == true) viewModel.qualities else null, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed, !viewModel.gamesList.value.isNullOrEmpty())
+                findNavController().navigate(PlayerSettingsDialogDirections.actionGlobalPlayerSettingsDialog(
+                    qualities = viewModel.qualities.toTypedArray(),
+                    qualityIndex = viewModel.qualityIndex,
+                    speed = viewModel.currentPlayer.value!!.playbackParameters.speed,
+                    vodGames = !viewModel.gamesList.value.isNullOrEmpty()
+                ))
             }
         }
         if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
@@ -109,7 +128,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                         gamesButton.visible()
                         gamesButton.setOnClickListener { showVodGames() }
                     }
-                    (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
+                    //(childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setVodGames()
                 }
             }
         }
@@ -126,7 +145,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     fun showVodGames() {
-        viewModel.gamesList.value?.let { FragmentUtils.showPlayerGamesDialog(childFragmentManager, it) }
+        viewModel.gamesList.value?.let { findNavController().navigate(PlayerGamesDialogDirections.actionGlobalPlayerGamesDialog(it.toTypedArray())) }
     }
 
     fun checkBookmark() {
@@ -134,7 +153,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     fun isBookmarked() {
-        (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(viewModel.bookmarkItem.value != null)
+        //(childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.setBookmarkText(viewModel.bookmarkItem.value != null)
     }
 
     fun saveBookmark() {
@@ -163,7 +182,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 
     override fun showDownloadDialog() {
         if (DownloadUtils.hasStoragePermission(requireActivity())) {
-            viewModel.videoInfo?.let { VideoDownloadDialog.newInstance(it).show(childFragmentManager, null) }
+            viewModel.videoInfo?.let { findNavController().navigate(VideoDownloadDialogDirections.actionGlobalVideoDownloadDialog(videoInfo = it)) }
         }
     }
 
@@ -195,12 +214,8 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         viewModel.startAudioOnly()
     }
 
-    companion object {
-        private const val KEY_VIDEO = "video"
-        private const val KEY_OFFSET = "offset"
-
-        fun newInstance(video: Video, offset: Double? = null): VideoPlayerFragment {
-            return VideoPlayerFragment().apply { arguments = bundleOf(KEY_VIDEO to video, KEY_OFFSET to offset) }
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

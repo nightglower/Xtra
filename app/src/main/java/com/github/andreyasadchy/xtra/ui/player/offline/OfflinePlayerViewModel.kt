@@ -1,8 +1,9 @@
 package com.github.andreyasadchy.xtra.ui.player.offline
 
-import android.app.Application
+import android.content.Context
 import androidx.core.net.toUri
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.repository.OfflineRepository
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
@@ -13,11 +14,14 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
+@HiltViewModel
 class OfflinePlayerViewModel @Inject constructor(
-        context: Application,
-        private val repository: OfflineRepository) : PlayerViewModel(context) {
+    @ApplicationContext context: Context,
+    private val repository: OfflineRepository) : PlayerViewModel(context) {
 
     private lateinit var video: OfflineVideo
     val qualities = mutableListOf(context.getString(R.string.source), context.getString(R.string.audio_only))
@@ -28,7 +32,7 @@ class OfflinePlayerViewModel @Inject constructor(
     }
 
     fun setVideo(video: OfflineVideo) {
-        val context = getApplication<Application>()
+        val context = XtraApp.INSTANCE.applicationContext
         if (!this::video.isInitialized) {
             this.video = video
             val mediaSourceFactory = if (video.vod) {
@@ -60,7 +64,7 @@ class OfflinePlayerViewModel @Inject constructor(
         isResumed = false
         if (playerMode.value == PlayerMode.NORMAL) {
             playbackPosition = player.currentPosition
-            val context = getApplication<Application>()
+            val context = XtraApp.INSTANCE.applicationContext
             if (!userLeaveHint && !isPaused() && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
                 startAudioOnly(true)
             } else {

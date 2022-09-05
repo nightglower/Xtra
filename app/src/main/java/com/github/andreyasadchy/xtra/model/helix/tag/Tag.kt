@@ -1,7 +1,7 @@
 package com.github.andreyasadchy.xtra.model.helix.tag
 
 import android.os.Parcelable
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Tag(

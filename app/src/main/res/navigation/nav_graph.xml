@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/streamsFragment">
+
+    <fragment
+        android:id="@+id/streamsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.streams.common.StreamsFragment"
+        android:label="StreamsFragment" >
+        <argument android:name="gameId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="gameName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="tags"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="updateLocal"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+    <action android:id="@+id/action_global_streamsFragment" app:destination="@id/streamsFragment" />
+    <dialog
+        android:id="@+id/streamsSortDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.streams.common.StreamsSortDialog"
+        android:label="StreamsSortDialog" >
+        <argument
+            android:name="sort"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.stream.Sort" />
+    </dialog>
+    <action android:id="@+id/action_global_streamsSortDialog" app:destination="@id/streamsSortDialog" />
+    <fragment
+        android:id="@+id/gameFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.games.GameFragment"
+        android:label="GameFragment" >
+        <argument
+            android:name="gameId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="gameName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="tags"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="updateLocal"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+    <action android:id="@+id/action_global_gameFragment" app:destination="@id/gameFragment" />
+    <fragment
+        android:id="@+id/gamesFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.games.GamesFragment"
+        android:label="GamesFragment" >
+        <argument
+            android:name="tags"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+    <action android:id="@+id/action_global_gamesFragment" app:destination="@id/gamesFragment" />
+    <fragment
+        android:id="@+id/gameVideosFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.videos.game.GameVideosFragment"
+        android:label="GameVideosFragment" >
+        <argument
+            android:name="gameId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="gameName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+    <action android:id="@+id/action_global_gameVideosFragment" app:destination="@id/gameVideosFragment"/>
+    <fragment
+        android:id="@+id/clipsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment"
+        android:label="ClipsFragment">
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelLogin"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="gameId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="gameName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment><action android:id="@+id/action_global_clipsFragment" app:destination="@id/clipsFragment"/>
+    <dialog
+        android:id="@+id/videosSortDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.videos.VideosSortDialog"
+        android:label="VideosSortDialog" >
+        <argument
+            android:name="sort"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.video.Sort"
+            android:defaultValue="VIEWS" />
+        <argument
+            android:name="period"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.video.Period"
+            android:defaultValue="ALL" />
+        <argument
+            android:name="type"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.video.BroadcastType"
+            android:defaultValue="ALL" />
+        <argument
+            android:name="languageIndex"
+            app:argType="integer"
+            android:defaultValue="0" />
+        <argument
+            android:name="saveSort"
+            app:argType="boolean"
+            android:defaultValue="false" />
+        <argument
+            android:name="saveDefault"
+            app:argType="boolean"
+            android:defaultValue="false" />
+        <argument
+            android:name="clipChannel"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </dialog>
+    <action android:id="@+id/action_global_videosSortDialog" app:destination="@id/videosSortDialog" />
+    <fragment
+        android:id="@+id/channelVideosFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.videos.channel.ChannelVideosFragment"
+        android:label="ChannelVideosFragment" >
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelLogin"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+    <action android:id="@+id/action_global_channelVideosFragment" app:destination="@id/channelVideosFragment" />
+    <fragment
+        android:id="@+id/followedVideosFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.videos.followed.FollowedVideosFragment"
+        android:label="FollowedVideosFragment" />
+    <action android:id="@+id/action_global_followedVideosFragment" app:destination="@id/followedVideosFragment" />
+    <dialog
+        android:id="@+id/followedChannelsSortDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.follow.channels.FollowedChannelsSortDialog"
+        android:label="FollowedChannelsSortDialog" >
+        <argument
+            android:name="sort"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.follows.Sort" />
+        <argument
+            android:name="order"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.follows.Order" />
+        <argument
+            android:name="saveDefault"
+            app:argType="boolean" />
+    </dialog>
+    <action android:id="@+id/action_global_followedChannelsSortDialog" app:destination="@id/followedChannelsSortDialog" />
+    <fragment
+        android:id="@+id/followedChannelsFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.follow.channels.FollowedChannelsFragment"
+        android:label="FollowedChannelsFragment" />
+    <action android:id="@+id/action_global_followedChannelsFragment" app:destination="@id/followedChannelsFragment" />
+    <fragment
+        android:id="@+id/followedGamesFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.follow.games.FollowedGamesFragment"
+        android:label="FollowedGamesFragment" />
+    <action android:id="@+id/action_global_followedGamesFragment" app:destination="@id/followedGamesFragment" />
+    <fragment
+        android:id="@+id/followFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.follow.FollowFragment"
+        android:label="FollowFragment" />
+    <action android:id="@+id/action_global_followFragment" app:destination="@id/followFragment" />
+    <fragment
+        android:id="@+id/savedFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.saved.SavedFragment"
+        android:label="SavedFragment" /><action android:id="@+id/action_global_savedFragment" app:destination="@id/savedFragment"/>
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.search.SearchFragment"
+        android:label="SearchFragment" />
+    <action android:id="@+id/action_global_searchFragment" app:destination="@id/searchFragment" />
+    <fragment
+        android:id="@+id/tagSearchFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.search.tags.TagSearchFragment"
+        android:label="TagSearchFragment" >
+        <argument
+            android:name="gameId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="gameName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="getGameTags"
+            app:argType="boolean" />
+    </fragment>
+    <action android:id="@+id/action_global_tagSearchFragment" app:destination="@id/tagSearchFragment" />
+    <fragment
+        android:id="@+id/channelPagerFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragment"
+        android:label="ChannelPagerFragment" >
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelLogin"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelLogo"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="updateLocal"
+            app:argType="boolean"
+            android:defaultValue="false" />
+        <argument
+            android:name="streamId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+    <action android:id="@+id/action_global_channelPagerFragment" app:destination="@id/channelPagerFragment" />
+    <dialog
+        android:id="@+id/playerGamesDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.player.PlayerGamesDialog"
+        android:label="PlayerGamesDialog" >
+        <argument
+            android:name="games"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.game.Game[]" />
+    </dialog>
+    <action android:id="@+id/action_global_playerGamesDialog" app:destination="@id/playerGamesDialog" />
+    <dialog
+        android:id="@+id/playerVolumeDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.player.PlayerVolumeDialog"
+        android:label="PlayerVolumeDialog" />
+    <action android:id="@+id/action_global_playerVolumeDialog" app:destination="@id/playerVolumeDialog" />
+    <dialog
+        android:id="@+id/playerViewerListDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.player.PlayerViewerListDialog"
+        android:label="PlayerViewerListDialog" >
+        <argument
+            android:name="login"
+            app:argType="string" />
+    </dialog>
+    <action android:id="@+id/action_global_playerViewerListDialog" app:destination="@id/playerViewerListDialog" />
+    <dialog
+        android:id="@+id/playerSettingsDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog"
+        android:label="PlayerSettingsDialog" >
+        <argument
+            android:name="qualities"
+            app:argType="string[]" />
+        <argument
+            android:name="qualityIndex"
+            app:argType="integer" />
+        <argument
+            android:name="speed"
+            app:argType="float" />
+        <argument
+            android:name="vodGames"
+            app:argType="boolean" />
+    </dialog>
+    <action android:id="@+id/action_global_playerSettingsDialog" app:destination="@id/playerSettingsDialog" />
+    <dialog
+        android:id="@+id/sleepTimerDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.player.SleepTimerDialog"
+        android:label="SleepTimerDialog" >
+        <argument
+            android:name="timeLeft"
+            app:argType="long" />
+    </dialog>
+    <action android:id="@+id/action_global_sleepTimerDialog" app:destination="@id/sleepTimerDialog" />
+    <fragment
+        android:id="@+id/clipPlayerFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment"
+        android:label="ClipPlayerFragment" >
+        <argument
+            android:name="clip"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.clip.Clip" />
+    </fragment>
+    <action android:id="@+id/action_global_clipPlayerFragment" app:destination="@id/clipPlayerFragment" />
+    <fragment
+        android:id="@+id/offlinePlayerFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment"
+        android:label="OfflinePlayerFragment" >
+        <argument
+            android:name="offlineVideo"
+            app:argType="com.github.andreyasadchy.xtra.model.offline.OfflineVideo" />
+    </fragment>
+    <fragment
+        android:id="@+id/streamPlayerFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment"
+        android:label="StreamPlayerFragment" >
+        <argument
+            android:name="stream"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.stream.Stream" />
+    </fragment>
+    <fragment
+        android:id="@+id/videoPlayerFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment"
+        android:label="VideoPlayerFragment" >
+        <argument
+            android:name="video"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.video.Video" />
+        <argument android:name="offset"
+            app:argType="float" />
+    </fragment>
+    <action android:id="@+id/action_global_offlinePlayerFragment" app:destination="@id/offlinePlayerFragment" />
+    <action android:id="@+id/action_global_streamPlayerFragment" app:destination="@id/streamPlayerFragment" />
+    <action android:id="@+id/action_global_videoPlayerFragment" app:destination="@id/videoPlayerFragment" />
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.chat.ChatFragment"
+        android:label="ChatFragment" >
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelLogin"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelName"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="streamId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="videoId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="startTime"
+            app:argType="float" />
+        <argument
+            android:name="isLive"
+            app:argType="boolean" />
+    </fragment>
+    <action android:id="@+id/action_global_chatFragment" app:destination="@id/chatFragment" />
+    <dialog
+        android:id="@+id/messageClickedDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.view.chat.MessageClickedDialog"
+        android:label="MessageClickedDialog" >
+        <argument
+            android:name="enableMessaging"
+            app:argType="boolean" />
+        <argument
+            android:name="originalMessage"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="formattedMessage"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="userId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="host"
+            app:argType="boolean" />
+        <argument
+            android:name="fullMsg"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </dialog>
+    <action android:id="@+id/action_global_messageClickedDialog" app:destination="@id/messageClickedDialog" />
+    <dialog
+        android:id="@+id/radioButtonDialogFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment"
+        android:label="RadioButtonDialogFragment" >
+        <argument
+            android:name="requestCode"
+            app:argType="integer" />
+        <argument
+            android:name="labels"
+            app:argType="string[]" />
+        <argument
+            android:name="tags"
+            app:argType="integer[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="checkedIndex"
+            app:argType="integer" />
+    </dialog>
+    <action android:id="@+id/action_global_radioButtonDialogFragment" app:destination="@id/radioButtonDialogFragment" />
+    <dialog
+        android:id="@+id/videoDownloadDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog"
+        android:label="VideoDownloadDialog" >
+        <argument
+            android:name="video"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.video.Video"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="videoInfo"
+            app:argType="com.github.andreyasadchy.xtra.model.VideoDownloadInfo"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </dialog>
+    <action android:id="@+id/action_global_videoDownloadDialog" app:destination="@id/videoDownloadDialog" />
+    <dialog
+        android:id="@+id/clipDownloadDialog"
+        android:name="com.github.andreyasadchy.xtra.ui.download.ClipDownloadDialog"
+        android:label="ClipDownloadDialog" >
+        <argument
+            android:name="clip"
+            app:argType="com.github.andreyasadchy.xtra.model.helix.clip.Clip" />
+        <argument
+            android:name="qualityKeys"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <argument
+            android:name="qualityValues"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </dialog>
+    <action android:id="@+id/action_global_clipDownloadDialog" app:destination="@id/clipDownloadDialog" />
+</navigation>

@@ -1,43 +1,62 @@
 package com.github.andreyasadchy.xtra.ui.search.tags
 
-import android.view.View
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import com.github.andreyasadchy.xtra.R
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.FragmentSearchChannelsListItemBinding
 import com.github.andreyasadchy.xtra.model.helix.tag.Tag
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
-import com.github.andreyasadchy.xtra.ui.games.GamesFragment
-import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.ui.games.GameFragmentDirections
+import com.github.andreyasadchy.xtra.ui.games.GamesFragmentDirections
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.visible
-import kotlinx.android.synthetic.main.fragment_search_channels_list_item.view.*
 
 class TagSearchAdapter(
+    private val fragment: Fragment,
+    private val args: TagSearchFragmentArgs) : PagingDataAdapter<Tag, TagSearchAdapter.PagingViewHolder>(
+    object : DiffUtil.ItemCallback<Tag>() {
+        override fun areItemsTheSame(oldItem: Tag, newItem: Tag): Boolean =
+            oldItem.id == newItem.id
+
+        override fun areContentsTheSame(oldItem: Tag, newItem: Tag): Boolean = true
+    }) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PagingViewHolder {
+        val binding = FragmentSearchChannelsListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return PagingViewHolder(binding, fragment, args)
+    }
+
+    override fun onBindViewHolder(holder: PagingViewHolder, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    inner class PagingViewHolder(
+        private val binding: FragmentSearchChannelsListItemBinding,
         private val fragment: Fragment,
-        private val gamesListener: GamesFragment.OnTagGames,
-        private val streamsListener: GamesFragment.OnGameSelectedListener) : BasePagedListAdapter<Tag>(
-        object : DiffUtil.ItemCallback<Tag>() {
-            override fun areItemsTheSame(oldItem: Tag, newItem: Tag): Boolean =
-                    oldItem.id == newItem.id
-
-            override fun areContentsTheSame(oldItem: Tag, newItem: Tag): Boolean = true
-        }) {
-
-    override val layoutId: Int = R.layout.fragment_search_channels_list_item
-
-    override fun bind(item: Tag, view: View) {
-        with(view) {
-            if (item.name != null) {
-                userName.visible()
-                userName.text = item.name
-            } else {
-                userName.gone()
-            }
-            if (item.id != null) {
-                if (item.scope == "CATEGORY") {
-                    setOnClickListener { gamesListener.openTagGames(listOf(item.id)) }
+        private val args: TagSearchFragmentArgs): RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: Tag?) {
+            with(binding) {
+                if (item?.name != null) {
+                    userName.visible()
+                    userName.text = item.name
                 } else {
-                    setOnClickListener { streamsListener.openGame(tags = listOf(item.id), id = fragment.parentFragment?.arguments?.getString(C.GAME_ID), name = fragment.parentFragment?.arguments?.getString(C.GAME_NAME)) }
+                    userName.gone()
+                }
+                if (item?.id != null) {
+                    if (item.scope == "CATEGORY") {
+                        root.setOnClickListener { fragment.findNavController().navigate(GamesFragmentDirections.actionGlobalGamesFragment(
+                            tags = listOf(item.id).toTypedArray()
+                        )) }
+                    } else {
+                        root.setOnClickListener { fragment.findNavController().navigate(GameFragmentDirections.actionGlobalGameFragment(
+                            gameId = args.gameId,
+                            gameName = args.gameName,
+                            tags = listOf(item.id).toTypedArray()
+                        )) }
+                    }
                 }
             }
         }

@@ -5,46 +5,54 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.RadioButton
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.os.bundleOf
+import androidx.core.content.edit
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.navArgs
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.helix.clip.Clip
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.prefs
-import kotlinx.android.synthetic.main.dialog_clip_download.*
-import javax.inject.Inject
+import com.github.andreyasadchy.xtra.databinding.DialogClipDownloadBinding
+import com.github.andreyasadchy.xtra.util.*
+import kotlin.math.max
 
-class ClipDownloadDialog : BaseDownloadDialog() {
+class ClipDownloadDialog : DialogFragment() {
 
-    companion object {
-        private const val KEY_QUALITIES = "urls"
-        private const val KEY_CLIP = "clip"
+    private var _binding: DialogClipDownloadBinding? = null
+    private val binding get() = _binding!!
+    private val args: ClipDownloadDialogArgs by navArgs()
+    private val viewModel: ClipDownloadViewModel by viewModels()
 
-        fun newInstance(clip: Clip, qualities: Map<String, String>? = null): ClipDownloadDialog {
-            return ClipDownloadDialog().apply {
-                arguments = bundleOf(KEY_CLIP to clip, KEY_QUALITIES to qualities)
+    private lateinit var storage: List<DownloadUtils.Storage>
+    private val downloadPath: String
+        get() {
+            val index = if (storage.size == 1) {
+                0
+            } else {
+                val checked = max(binding.storageSelectionContainer.radioGroup.checkedRadioButtonId, 0)
+                requireContext().prefs().edit { putInt(C.DOWNLOAD_STORAGE, checked) }
+                checked
             }
+            return storage[index].path
         }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = DialogClipDownloadBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
-    private val viewModel by viewModels<ClipDownloadViewModel> { viewModelFactory }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View?  =
-            inflater.inflate(R.layout.dialog_clip_download, container, false)
-
-    @Deprecated("Deprecated in Java")
-    @Suppress("UNCHECKED_CAST")
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        with(requireArguments()) {
-            viewModel.init(requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), getParcelable(KEY_CLIP)!!, getSerializable(KEY_QUALITIES) as Map<String, String>?)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val map = mutableMapOf<String, String>()
+        args.qualityValues?.let { values ->
+            args.qualityKeys?.forEachIndexed { index, key ->
+                map[key] = values[index]
+            }
         }
+        viewModel.init(requireContext().prefs().getString(C.GQL_CLIENT_ID, ""), args.clip, map)
         viewModel.qualities.observe(viewLifecycleOwner) {
             ((requireView() as NestedScrollView).children.first() as ConstraintLayout).children.forEach { v -> v.isVisible = v.id != R.id.progressBar && v.id != R.id.storageSelectionContainer }
             init(it)
@@ -52,14 +60,32 @@ class ClipDownloadDialog : BaseDownloadDialog() {
     }
 
     private fun init(qualities: Map<String, String>) {
-        val context = requireContext()
-        init(context)
-        spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
-        cancel.setOnClickListener { dismiss() }
-        download.setOnClickListener {
-            val quality = spinner.selectedItem.toString()
-            viewModel.download(qualities.getValue(quality), downloadPath, quality)
-            dismiss()
+        with(binding) {
+            val context = requireContext()
+            storage = DownloadUtils.getAvailableStorage(context)
+            if (DownloadUtils.isExternalStorageAvailable) {
+                if (storage.size > 1) {
+                    storageSelectionContainer.root.visible()
+                    for (s in storage) {
+                        storageSelectionContainer.radioGroup.addView(RadioButton(context).apply {
+                            id = s.id
+                            text = s.name
+                        })
+                    }
+                    storageSelectionContainer.radioGroup.check(context.prefs().getInt(C.DOWNLOAD_STORAGE, 0))
+                }
+            } else {
+                storageSelectionContainer.root.visible()
+                storageSelectionContainer.noStorageDetected.visible()
+                download.gone()
+            }
+            spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
+            cancel.setOnClickListener { dismiss() }
+            download.setOnClickListener {
+                val quality = spinner.selectedItem.toString()
+                viewModel.download(qualities.getValue(quality), downloadPath, quality)
+                dismiss()
+            }
         }
     }
 }

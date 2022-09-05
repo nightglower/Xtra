@@ -4,14 +4,14 @@ import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.User
-import com.github.andreyasadchy.xtra.util.FragmentUtils
-import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.shortToast
-import com.github.andreyasadchy.xtra.util.visible
+import com.github.andreyasadchy.xtra.util.*
 
 interface FollowFragment {
-    fun initializeFollow(fragment: Fragment, viewModel: FollowViewModel, followButton: ImageButton, setting: Int, user: User, helixClientId: String? = null, gqlClientId: String? = null) {
+    fun initializeFollow(fragment: Fragment, viewModel: FollowViewModel, followButton: ImageButton, setting: Int) {
         val context = fragment.requireContext()
+        val user = User.get(context)
+        val helixClientId = context.prefs().getString(C.HELIX_CLIENT_ID, "")
+        val gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "")
         with(viewModel) {
             setUser(user, helixClientId, gqlClientId, setting)
             followButton.visible()
