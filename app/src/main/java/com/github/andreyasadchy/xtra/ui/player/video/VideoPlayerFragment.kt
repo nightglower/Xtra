@@ -1,11 +1,14 @@
 package com.github.andreyasadchy.xtra.ui.player.video
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerVideoBinding
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
@@ -25,7 +28,10 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 //        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //    }
 
+    private var _binding: FragmentPlayerVideoBinding? = null
+    private val binding get() = _binding!!
     override val viewModel: VideoPlayerViewModel by viewModels()
+
     private lateinit var video: Video
     override val channelId: String?
         get() = video.user_id
@@ -49,6 +55,11 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         video = requireArguments().getParcelable(KEY_VIDEO)!!
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerVideoBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -196,6 +207,11 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 
     fun startAudioOnly() {
         viewModel.startAudioOnly()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {

@@ -8,15 +8,13 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
-import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentSearchBinding
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.common.pagers.MediaPagerFragment
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.Searchable
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.gone
-import kotlinx.android.synthetic.main.fragment_media_pager.view.*
-import kotlinx.android.synthetic.main.fragment_search.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
@@ -32,31 +30,38 @@ class BaseTagSearchFragment : MediaPagerFragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_search, container, false)
+    override val pagerBinding get() = binding.pagerLayout
+    private var _binding: FragmentSearchBinding? = null
+    private val binding get() = _binding!!
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentSearchBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val activity = requireActivity() as MainActivity
-        setAdapter(BaseTagSearchPagerAdapter(this))
-        pagerLayout.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                (currentFragment as? Searchable)?.search(search.query.toString())
+        with(binding) {
+            val activity = requireActivity() as MainActivity
+            setAdapter(BaseTagSearchPagerAdapter(this@BaseTagSearchFragment))
+            pagerLayout.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    (currentFragment as? Searchable)?.search(search.query.toString())
+                }
+            })
+            toolbar.apply {
+                navigationIcon = Utils.getNavigationIcon(activity)
+                setNavigationOnClickListener { activity.popFragment() }
             }
-        })
-        toolbar.apply {
-            navigationIcon = Utils.getNavigationIcon(activity)
-            setNavigationOnClickListener { activity.popFragment() }
+            pagerLayout.tabLayout.gone()
         }
-        pagerLayout.tabLayout.gone()
     }
 
     override val currentFragment: Fragment?
-        get() = childFragmentManager.findFragmentByTag("f${pagerLayout.viewPager.currentItem}")
+        get() = childFragmentManager.findFragmentByTag("f${binding.pagerLayout.viewPager.currentItem}")
 
     override fun initialize() {
-        search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+        binding.search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             private var job: Job? = null
 
             override fun onQueryTextSubmit(query: String): Boolean {
@@ -80,4 +85,9 @@ class BaseTagSearchFragment : MediaPagerFragment() {
     }
 
     override fun onNetworkRestored() {}
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }

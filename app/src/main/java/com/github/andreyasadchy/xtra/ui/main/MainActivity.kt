@@ -19,8 +19,10 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
 import androidx.preference.PreferenceManager
+import androidx.viewpager2.widget.ViewPager2
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.databinding.ActivityMainBinding
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
@@ -57,8 +59,6 @@ import com.github.andreyasadchy.xtra.util.*
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.ncapdevi.fragnav.FragNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.fragment_media_pager.view.*
 
 
 const val INDEX_GAMES = FragNavController.TAB1
@@ -78,6 +78,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
         const val INTENT_OPEN_PLAYER = 2
     }
 
+    private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
     var playerFragment: BasePlayerFragment? = null
         private set
@@ -138,19 +139,20 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             }
         }
         applyTheme()
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val notInitialized = savedInstanceState == null
         initNavigation()
         if ((User.get(this) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (User.get(this) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
             fragNavController.initialize(INDEX_FOLLOWED, savedInstanceState)
             if (notInitialized) {
-                navBar.selectedItemId = R.id.fragment_follow
+                binding.navBar.selectedItemId = R.id.fragment_follow
             }
         } else {
             fragNavController.initialize(INDEX_TOP, savedInstanceState)
             if (notInitialized) {
-                navBar.selectedItemId = R.id.fragment_top
+                binding.navBar.selectedItemId = R.id.fragment_top
             }
         }
         var flag = notInitialized && !isNetworkAvailable
@@ -173,13 +175,13 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 if (fragNavController.isRootFragment) {
                     if ((User.get(this@MainActivity) !is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) < 2)) || (User.get(this@MainActivity) is NotLoggedIn && ((prefs.getString(C.UI_STARTONFOLLOWED, "1")?.toInt() ?: 1) == 0))) {
                         if (fragNavController.currentStackIndex != INDEX_FOLLOWED) {
-                            navBar.selectedItemId = R.id.fragment_follow
+                            binding.navBar.selectedItemId = R.id.fragment_follow
                         } else {
                             finish()
                         }
                     } else {
                         if (fragNavController.currentStackIndex != INDEX_TOP) {
-                            navBar.selectedItemId = R.id.fragment_top
+                            binding.navBar.selectedItemId = R.id.fragment_top
                         } else {
                             finish()
                         }
@@ -304,7 +306,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                         // channel chat message dialog
                         val fragment = fragNavController.currentFrag as? ChannelPagerFragment?
                         if (fragment != null) {
-                            ((fragment.childFragmentManager.findFragmentByTag("android:switcher:" + fragment.view?.viewPager?.id + ":" + fragment.view?.viewPager?.currentItem) as? ChatFragment?)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
+                            ((fragment.childFragmentManager.findFragmentByTag("android:switcher:" + fragment.view?.findViewById<ViewPager2>(R.id.viewPager)?.id + ":" + fragment.view?.findViewById<ViewPager2>(R.id.viewPager)?.currentItem) as? ChatFragment?)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
                         }
                         try {
                             val params = PictureInPictureParams.Builder()
@@ -385,7 +387,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
             }
         } else {
             when (intent?.getIntExtra(KEY_CODE, -1)) {
-                INTENT_OPEN_DOWNLOADS_TAB -> navBar.selectedItemId = R.id.fragment_downloads
+                INTENT_OPEN_DOWNLOADS_TAB -> binding.navBar.selectedItemId = R.id.fragment_downloads
                 INTENT_OPEN_DOWNLOADED_VIDEO -> startOfflineVideo(intent.getParcelableExtra(KEY_VIDEO)!!)
                 INTENT_OPEN_PLAYER -> { //TODO if was closed need to reopen
                     playerFragment?.maximize() ?: AudioPlayerService.connection?.let { XtraApp.INSTANCE.unbindService(it) }
@@ -471,11 +473,11 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
     }
 
     private fun hideNavigationBar() {
-        navBarContainer.gone()
+        binding.navBarContainer.gone()
     }
 
     private fun showNavigationBar() {
-        navBarContainer.visible()
+        binding.navBarContainer.visible()
     }
 
     fun popFragment() {
@@ -515,7 +517,7 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                 }
             }
         }
-        navBar.apply {
+        binding.navBar.apply {
             setOnNavigationItemSelectedListener {
                 val index = when (it.itemId) {
                     R.id.fragment_games -> INDEX_GAMES

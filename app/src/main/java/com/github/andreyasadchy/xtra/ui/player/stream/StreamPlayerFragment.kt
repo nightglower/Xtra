@@ -1,12 +1,17 @@
 package com.github.andreyasadchy.xtra.ui.player.stream
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerStreamBinding
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.model.helix.stream.Stream
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
@@ -17,12 +22,14 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.ui.player.PlayerVolumeDialog
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.player_stream.*
 
 @AndroidEntryPoint
 class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnSortOptionChanged, PlayerSettingsDialog.PlayerSettingsListener, PlayerVolumeDialog.PlayerVolumeListener {
 
+    private var _binding: FragmentPlayerStreamBinding? = null
+    private val binding get() = _binding!!
     override val viewModel: StreamPlayerViewModel by viewModels()
+
     lateinit var chatFragment: ChatFragment
     private lateinit var stream: Stream
     override val channelId: String?
@@ -47,6 +54,11 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         stream = requireArguments().getParcelable(KEY_STREAM)!!
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerStreamBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -90,6 +102,7 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
         val restart = requireView().findViewById<ImageButton>(R.id.playerRestart)
         val mode = requireView().findViewById<ImageButton>(R.id.playerMode)
         val viewersLayout = requireView().findViewById<LinearLayout>(R.id.viewersLayout)
+        val viewers = requireView().findViewById<TextView>(R.id.viewers)
         viewModel.loaded.observe(viewLifecycleOwner) {
             if (it) {
                 settings.enable()
@@ -139,6 +152,8 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
     }
 
     fun updateViewerCount(viewerCount: Int?) {
+        val viewers = requireView().findViewById<TextView>(R.id.viewers)
+        val viewerIcon = requireView().findViewById<ImageView>(R.id.viewerIcon)
         if (viewerCount != null) {
             viewers.text = TwitchApiHelper.formatCount(requireContext(), viewerCount)
             if (prefs.getBoolean(C.PLAYER_VIEWERICON, true)) {
@@ -208,6 +223,11 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
 
     fun startAudioOnly() {
         viewModel.startAudioOnly()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {

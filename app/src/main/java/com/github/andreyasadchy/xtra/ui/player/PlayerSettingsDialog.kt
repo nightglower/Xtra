@@ -9,6 +9,7 @@ import androidx.core.content.edit
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.PlayerSettingsBinding
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.ExpandingBottomSheetDialogFragment
@@ -21,7 +22,6 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.FragmentUtils
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.visible
-import kotlinx.android.synthetic.main.player_settings.*
 
 class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDialogFragment.OnSortOptionChanged {
 
@@ -49,6 +49,8 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
         }
     }
 
+    private var _binding: PlayerSettingsBinding? = null
+    private val binding get() = _binding!!
     private lateinit var listener: PlayerSettingsListener
 
     private lateinit var qualities: List<CharSequence>
@@ -60,136 +62,139 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
         listener = parentFragment as PlayerSettingsListener
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.player_settings, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = PlayerSettingsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val arguments = requireArguments()
-        if (parentFragment !is StreamPlayerFragment && requireContext().prefs().getBoolean(C.PLAYER_MENU_SPEED, true)) {
-            menuSpeed.visible()
-            menuSpeed.setOnClickListener {
-                FragmentUtils.showRadioButtonDialogFragment(requireContext(), childFragmentManager, SPEED_LABELS, speedIndex, REQUEST_CODE_SPEED)
-            }
-            setSelectedSpeed(SPEEDS.indexOf(arguments.getFloat(SPEED)))
-        }
-        if (requireContext().prefs().getBoolean(C.PLAYER_MENU_QUALITY, false)) {
-            menuQuality.visible()
-            menuQuality.setOnClickListener { dismiss() }
-            setQualities(arguments.getCharSequenceArrayList(QUALITIES), arguments.getInt(QUALITY_INDEX))
-        }
-        if (parentFragment is StreamPlayerFragment) {
-            if (requireContext().prefs().getBoolean(C.PLAYER_MENU_VIEWER_LIST, true)) {
-                menuViewerList.visible()
-                menuViewerList.setOnClickListener {
-                    (parentFragment as? StreamPlayerFragment)?.openViewerList()
-                    dismiss()
+        with(binding) {
+            val arguments = requireArguments()
+            if (parentFragment !is StreamPlayerFragment && requireContext().prefs().getBoolean(C.PLAYER_MENU_SPEED, true)) {
+                menuSpeed.visible()
+                menuSpeed.setOnClickListener {
+                    FragmentUtils.showRadioButtonDialogFragment(requireContext(), childFragmentManager, SPEED_LABELS, speedIndex, REQUEST_CODE_SPEED)
                 }
+                setSelectedSpeed(SPEEDS.indexOf(arguments.getFloat(SPEED)))
             }
-            if (requireContext().prefs().getBoolean(C.PLAYER_MENU_RESTART, false)) {
-                menuRestart.visible()
-                menuRestart.setOnClickListener {
-                    (parentFragment as? StreamPlayerFragment)?.restartPlayer()
-                    dismiss()
-                }
+            if (requireContext().prefs().getBoolean(C.PLAYER_MENU_QUALITY, false)) {
+                menuQuality.visible()
+                menuQuality.setOnClickListener { dismiss() }
+                setQualities(arguments.getCharSequenceArrayList(QUALITIES), arguments.getInt(QUALITY_INDEX))
             }
-            if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-                val isLoggedIn = !User.get(requireContext()).login.isNullOrBlank() && (!User.get(requireContext()).gqlToken.isNullOrBlank() || !User.get(requireContext()).helixToken.isNullOrBlank())
-                if (isLoggedIn && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_BAR, true)) {
-                    menuChatBar.visible()
-                    if (requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
-                        menuChatBar.text = requireContext().getString(R.string.hide_chat_bar)
-                    } else {
-                        menuChatBar.text = requireContext().getString(R.string.show_chat_bar)
-                    }
-                    menuChatBar.setOnClickListener {
-                        (parentFragment as? BasePlayerFragment)?.toggleChatBar()
+            if (parentFragment is StreamPlayerFragment) {
+                if (requireContext().prefs().getBoolean(C.PLAYER_MENU_VIEWER_LIST, true)) {
+                    menuViewerList.visible()
+                    menuViewerList.setOnClickListener {
+                        (parentFragment as? StreamPlayerFragment)?.openViewerList()
                         dismiss()
                     }
                 }
-                if ((parentFragment as? BasePlayerFragment)?.isPortrait == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_TOGGLE, false)) {
-                    menuChatToggle.visible()
-                    if (requireContext().prefs().getBoolean(C.KEY_CHAT_OPENED, true)) {
-                        menuChatToggle.text = requireContext().getString(R.string.hide_chat)
-                        menuChatToggle.setOnClickListener {
-                            (parentFragment as? BasePlayerFragment)?.hideChat()
-                            dismiss()
+                if (requireContext().prefs().getBoolean(C.PLAYER_MENU_RESTART, false)) {
+                    menuRestart.visible()
+                    menuRestart.setOnClickListener {
+                        (parentFragment as? StreamPlayerFragment)?.restartPlayer()
+                        dismiss()
+                    }
+                }
+                if (!requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
+                    val isLoggedIn = !User.get(requireContext()).login.isNullOrBlank() && (!User.get(requireContext()).gqlToken.isNullOrBlank() || !User.get(requireContext()).helixToken.isNullOrBlank())
+                    if (isLoggedIn && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_BAR, true)) {
+                        menuChatBar.visible()
+                        if (requireContext().prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
+                            menuChatBar.text = requireContext().getString(R.string.hide_chat_bar)
+                        } else {
+                            menuChatBar.text = requireContext().getString(R.string.show_chat_bar)
                         }
-                    } else {
-                        menuChatToggle.text = requireContext().getString(R.string.show_chat)
-                        menuChatToggle.setOnClickListener {
-                            (parentFragment as? BasePlayerFragment)?.showChat()
+                        menuChatBar.setOnClickListener {
+                            (parentFragment as? BasePlayerFragment)?.toggleChatBar()
                             dismiss()
                         }
                     }
-                }
-                if (requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_DISCONNECT, true)) {
-                    menuChatDisconnect.visible()
-                    if ((parentFragment as? StreamPlayerFragment)?.chatFragment?.isActive() == false) {
-                        menuChatDisconnect.text = requireContext().getString(R.string.connect_chat)
-                        menuChatDisconnect.setOnClickListener {
-                            (parentFragment as? StreamPlayerFragment)?.chatFragment?.reconnect()
-                            dismiss()
+                    if ((parentFragment as? BasePlayerFragment)?.isPortrait == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_TOGGLE, false)) {
+                        menuChatToggle.visible()
+                        if (requireContext().prefs().getBoolean(C.KEY_CHAT_OPENED, true)) {
+                            menuChatToggle.text = requireContext().getString(R.string.hide_chat)
+                            menuChatToggle.setOnClickListener {
+                                (parentFragment as? BasePlayerFragment)?.hideChat()
+                                dismiss()
+                            }
+                        } else {
+                            menuChatToggle.text = requireContext().getString(R.string.show_chat)
+                            menuChatToggle.setOnClickListener {
+                                (parentFragment as? BasePlayerFragment)?.showChat()
+                                dismiss()
+                            }
                         }
-                    } else {
-                        menuChatDisconnect.text = requireContext().getString(R.string.disconnect_chat)
-                        menuChatDisconnect.setOnClickListener {
-                            (parentFragment as? StreamPlayerFragment)?.chatFragment?.disconnect()
-                            dismiss()
+                    }
+                    if (requireContext().prefs().getBoolean(C.PLAYER_MENU_CHAT_DISCONNECT, true)) {
+                        menuChatDisconnect.visible()
+                        if ((parentFragment as? StreamPlayerFragment)?.chatFragment?.isActive() == false) {
+                            menuChatDisconnect.text = requireContext().getString(R.string.connect_chat)
+                            menuChatDisconnect.setOnClickListener {
+                                (parentFragment as? StreamPlayerFragment)?.chatFragment?.reconnect()
+                                dismiss()
+                            }
+                        } else {
+                            menuChatDisconnect.text = requireContext().getString(R.string.disconnect_chat)
+                            menuChatDisconnect.setOnClickListener {
+                                (parentFragment as? StreamPlayerFragment)?.chatFragment?.disconnect()
+                                dismiss()
+                            }
                         }
                     }
                 }
             }
-        }
-        if (parentFragment is VideoPlayerFragment) {
-            if (arguments.getBoolean(VOD_GAMES)) {
-                setVodGames()
+            if (parentFragment is VideoPlayerFragment) {
+                if (arguments.getBoolean(VOD_GAMES)) {
+                    setVodGames()
+                }
+                if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
+                    (parentFragment as? VideoPlayerFragment)?.checkBookmark()
+                    (parentFragment as? VideoPlayerFragment)?.isBookmarked()
+                    menuBookmark.visible()
+                    menuBookmark.setOnClickListener {
+                        (parentFragment as? VideoPlayerFragment)?.saveBookmark()
+                        dismiss()
+                    }
+                }
             }
-            if (requireContext().prefs().getBoolean(C.PLAYER_MENU_BOOKMARK, true)) {
-                (parentFragment as? VideoPlayerFragment)?.checkBookmark()
-                (parentFragment as? VideoPlayerFragment)?.isBookmarked()
-                menuBookmark.visible()
-                menuBookmark.setOnClickListener {
-                    (parentFragment as? VideoPlayerFragment)?.saveBookmark()
+            if (parentFragment is HasDownloadDialog && requireContext().prefs().getBoolean(C.PLAYER_MENU_DOWNLOAD, true)) {
+                menuDownload.visible()
+                menuDownload.setOnClickListener {
+                    (parentFragment as? HasDownloadDialog)?.showDownloadDialog()
                     dismiss()
                 }
             }
-        }
-        if (parentFragment is HasDownloadDialog && requireContext().prefs().getBoolean(C.PLAYER_MENU_DOWNLOAD, true)) {
-            menuDownload.visible()
-            menuDownload.setOnClickListener {
-                (parentFragment as? HasDownloadDialog)?.showDownloadDialog()
-                dismiss()
+            if (parentFragment !is ClipPlayerFragment && requireContext().prefs().getBoolean(C.PLAYER_MENU_SLEEP, true)) {
+                menuTimer.visible()
+                menuTimer.setOnClickListener {
+                    (parentFragment as? BasePlayerFragment)?.showSleepTimerDialog()
+                    dismiss()
+                }
             }
-        }
-        if (parentFragment !is ClipPlayerFragment && requireContext().prefs().getBoolean(C.PLAYER_MENU_SLEEP, true)) {
-            menuTimer.visible()
-            menuTimer.setOnClickListener {
-                (parentFragment as? BasePlayerFragment)?.showSleepTimerDialog()
-                dismiss()
+            if ((parentFragment as? BasePlayerFragment)?.isPortrait == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_ASPECT, false)) {
+                menuRatio.visible()
+                menuRatio.setOnClickListener {
+                    (parentFragment as? BasePlayerFragment)?.setResizeMode()
+                    dismiss()
+                }
             }
-        }
-        if ((parentFragment as? BasePlayerFragment)?.isPortrait == false && requireContext().prefs().getBoolean(C.PLAYER_MENU_ASPECT, false)) {
-            menuRatio.visible()
-            menuRatio.setOnClickListener {
-                (parentFragment as? BasePlayerFragment)?.setResizeMode()
-                dismiss()
+            if (requireContext().prefs().getBoolean(C.PLAYER_MENU_VOLUME, false)) {
+                menuVolume.visible()
+                menuVolume.setOnClickListener {
+                    (parentFragment as? BasePlayerFragment)?.showVolumeDialog()
+                    dismiss()
+                }
             }
-        }
-        if (requireContext().prefs().getBoolean(C.PLAYER_MENU_VOLUME, false)) {
-            menuVolume.visible()
-            menuVolume.setOnClickListener {
-                (parentFragment as? BasePlayerFragment)?.showVolumeDialog()
-                dismiss()
-            }
-        }
-        if ((parentFragment is StreamPlayerFragment || parentFragment is VideoPlayerFragment) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) && requireContext().prefs().getBoolean(C.PLAYER_MENU_RELOAD_EMOTES, true)) {
-            menuReloadEmotes.visible()
-            menuReloadEmotes.setOnClickListener {
-                (parentFragment as? StreamPlayerFragment)?.chatFragment?.reloadEmotes() ?:
-                ((parentFragment as? VideoPlayerFragment)?.childFragmentManager?.findFragmentById(R.id.chatFragmentContainer) as? ChatFragment)?.reloadEmotes()
-                dismiss()
+            if ((parentFragment is StreamPlayerFragment || parentFragment is VideoPlayerFragment) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) && requireContext().prefs().getBoolean(C.PLAYER_MENU_RELOAD_EMOTES, true)) {
+                menuReloadEmotes.visible()
+                menuReloadEmotes.setOnClickListener {
+                    (parentFragment as? StreamPlayerFragment)?.chatFragment?.reloadEmotes() ?:
+                    ((parentFragment as? VideoPlayerFragment)?.childFragmentManager?.findFragmentById(R.id.chatFragmentContainer) as? ChatFragment)?.reloadEmotes()
+                    dismiss()
+                }
             }
         }
     }
@@ -209,19 +214,19 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
     }
 
     private fun setSelectedQuality(index: Int) {
-        qualityValue.text = qualities[index]
+        binding.qualityValue.text = qualities[index]
         qualityIndex = index
     }
 
     private fun setSelectedSpeed(index: Int) {
-        speedValue.text = getString(SPEED_LABELS[index])
+        binding.speedValue.text = getString(SPEED_LABELS[index])
         speedIndex = index
     }
 
     fun setVodGames() {
         if (requireContext().prefs().getBoolean(C.PLAYER_MENU_GAMES, false)) {
-            menuVodGames.visible()
-            menuVodGames.setOnClickListener {
+            binding.menuVodGames.visible()
+            binding.menuVodGames.setOnClickListener {
                 (parentFragment as? VideoPlayerFragment)?.showVodGames()
                 dismiss()
             }
@@ -230,20 +235,25 @@ class PlayerSettingsDialog : ExpandingBottomSheetDialogFragment(), RadioButtonDi
 
     fun setBookmarkText(isBookmarked: Boolean) {
         if (isBookmarked) {
-            menuBookmark.text = requireContext().getString(R.string.remove_bookmark)
+            binding.menuBookmark.text = requireContext().getString(R.string.remove_bookmark)
         } else {
-            menuBookmark.text = requireContext().getString(R.string.add_bookmark)
+            binding.menuBookmark.text = requireContext().getString(R.string.add_bookmark)
         }
     }
 
     fun setQualities(list: List<CharSequence>?, index: Int) {
-        if (!list.isNullOrEmpty() && menuQuality.isVisible) {
+        if (!list.isNullOrEmpty() && binding.menuQuality.isVisible) {
             qualities = list
-            qualityValue.visible()
+            binding.qualityValue.visible()
             setSelectedQuality(index)
-            menuQuality.setOnClickListener {
+            binding.menuQuality.setOnClickListener {
                 FragmentUtils.showRadioButtonDialogFragment(childFragmentManager, qualities, qualityIndex, REQUEST_CODE_QUALITY)
             }
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -16,13 +16,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.ActivityLoginBinding
 import com.github.andreyasadchy.xtra.model.LoggedIn
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.model.User
 import com.github.andreyasadchy.xtra.repository.AuthRepository
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -41,10 +41,13 @@ class LoginActivity : AppCompatActivity() {
     private var helixToken: String? = null
     private var gqlToken: String? = null
 
+    private lateinit var binding: ActivityLoginBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyTheme()
-        setContentView(R.layout.activity_login)
+        binding = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         val helixClientId = prefs().getString(C.HELIX_CLIENT_ID, "")
         val gqlClientId = prefs().getString(C.GQL_CLIENT_ID, "")
         val user = User.get(this)
@@ -69,20 +72,20 @@ class LoginActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(helixClientId: String?, gqlClientId: String?) {
-        webViewContainer.visible()
+        binding.webViewContainer.visible()
         val apiSetting = prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0
         val helixRedirect = prefs().getString(C.HELIX_REDIRECT, "https://localhost")
         val helixScopes = "chat:read chat:edit channel:moderate channel_editor whispers:edit user:read:follows"
         val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${helixClientId}&redirect_uri=${helixRedirect}&scope=${helixScopes}"
         val gqlRedirect = prefs().getString(C.GQL_REDIRECT, "https://www.twitch.tv/")
         val gqlAuthUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=${gqlClientId}&redirect_uri=${gqlRedirect}&scope="
-        havingTrouble.setOnClickListener {
+        binding.havingTrouble.setOnClickListener {
             AlertDialog.Builder(this)
                     .setMessage(getString(R.string.login_problem_solution))
                     .setPositiveButton(R.string.log_in) { _, _ ->
                         val intent = Intent(Intent.ACTION_VIEW, helixAuthUrl.toUri())
                         if (intent.resolveActivity(packageManager) != null) {
-                            webView.reload()
+                            binding.webView.reload()
                             startActivity(intent)
                         } else {
                             toast(R.string.no_browser_found)
@@ -114,7 +117,7 @@ class LoginActivity : AppCompatActivity() {
                     .show()
         }
         clearCookies()
-        with(webView) {
+        with(binding.webView) {
             val theme = if (prefs().getBoolean(C.UI_THEME_FOLLOW_SYSTEM, false)) {
                 when (resources.configuration.uiMode.and(Configuration.UI_MODE_NIGHT_MASK)) {
                     Configuration.UI_MODE_NIGHT_YES -> prefs().getString(C.UI_THEME_DARK_ON, "0")!!
@@ -169,8 +172,8 @@ class LoginActivity : AppCompatActivity() {
     private fun loginIfValidUrl(url: String, gqlAuthUrl: String, helixClientId: String?, gqlClientId: String?, apiSetting: Int): Boolean {
         val matcher = tokenPattern.matcher(url)
         return if (matcher.find() && tokens < 2) {
-            webViewContainer.gone()
-            progressBar.visible()
+            binding.webViewContainer.gone()
+            binding.progressBar.visible()
             val token = matcher.group(1)!!
             if (apiSetting == 0 && tokens == 0 || apiSetting == 2) {
                 lifecycleScope.launch {
@@ -216,7 +219,7 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
             if (apiSetting == 0 && tokens == 0) {
-                webView.loadUrl(gqlAuthUrl)
+                binding.webView.loadUrl(gqlAuthUrl)
             }
             tokens++
             true

@@ -1,10 +1,14 @@
 package com.github.andreyasadchy.xtra.ui.player.offline
 
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerOfflineBinding
 import com.github.andreyasadchy.xtra.model.offline.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
@@ -22,7 +26,10 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
 //        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //    }
 
+    private var _binding: FragmentPlayerOfflineBinding? = null
+    private val binding get() = _binding!!
     override val viewModel: OfflinePlayerViewModel by viewModels()
+
     private lateinit var video: OfflineVideo
     override val channelId: String?
         get() = video.channelId
@@ -47,6 +54,11 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
         enableNetworkCheck = false
         super.onCreate(savedInstanceState)
         video = requireArguments().getParcelable(KEY_VIDEO)!!
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerOfflineBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun initialize() {
@@ -109,6 +121,11 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
 
     fun startAudioOnly() {
         viewModel.startAudioOnly()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {

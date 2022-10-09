@@ -1,8 +1,8 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("kotlin-android-extensions")
     id("kotlin-kapt")
+    id("kotlin-parcelize")
     id("dagger.hilt.android.plugin")
     id("com.apollographql.apollo3").version("$apollo_ver")
 }
@@ -50,6 +50,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+    }
+    buildFeatures {
+        viewBinding true
     }
     lint {
         disable 'ContentDescription'

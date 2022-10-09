@@ -1,11 +1,14 @@
 package com.github.andreyasadchy.xtra.ui.player.clip
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.FragmentPlayerClipBinding
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.model.helix.video.Video
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
@@ -19,7 +22,6 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
 import com.github.andreyasadchy.xtra.ui.player.PlayerVolumeDialog
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.fragment_player_clip.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -29,7 +31,10 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
 //        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //    }
 
+    private var _binding: FragmentPlayerClipBinding? = null
+    private val binding get() = _binding!!
     override val viewModel: ClipPlayerViewModel by viewModels()
+
     private lateinit var clip: Clip
     override val channelId: String?
         get() = clip.broadcaster_id
@@ -55,13 +60,18 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         clip = requireArguments().getParcelable(KEY_CLIP)!!
     }
 
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentPlayerClipBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         if (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) == null) {
             childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, ChatFragment.newInstance(channelId, clip.video_id, clip.videoOffsetSeconds?.toDouble())).commit()
         }
         if (clip.video_id.isNullOrBlank()) {
-            watchVideo.gone()
+            binding.watchVideo.gone()
         }
     }
 
@@ -95,7 +105,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
             }
         }
         if (!clip.video_id.isNullOrBlank()) {
-            watchVideo.setOnClickListener {
+            binding.watchVideo.setOnClickListener {
                 (requireActivity() as MainActivity).startVideo(Video(
                     id = clip.video_id!!,
                     user_id = clip.broadcaster_id,
@@ -155,6 +165,11 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
 
     override fun getCurrentPosition(): Double {
         return runBlocking(Dispatchers.Main) { viewModel.currentPlayer.value!!.currentPosition / 1000.0 }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {

@@ -5,10 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.Searchable
-import com.github.andreyasadchy.xtra.ui.videos.BaseVideosAdapter
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.videos.VideosAdapter
 import com.github.andreyasadchy.xtra.util.C
@@ -16,14 +15,15 @@ import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
 
 @AndroidEntryPoint
 class VideoSearchFragment : BaseVideosFragment<VideoSearchViewModel>(), Searchable {
 
+    override val baseBinding get() = binding
+    private var _binding: CommonRecyclerViewLayoutBinding? = null
+    private val binding get() = _binding!!
     override val viewModel: VideoSearchViewModel by viewModels()
-
-    override val adapter: BaseVideosAdapter by lazy {
+    override val adapter by lazy {
         val activity = requireActivity() as MainActivity
         VideosAdapter(this, activity, activity, activity, {
             lastSelectedItem = it
@@ -34,13 +34,14 @@ class VideoSearchFragment : BaseVideosFragment<VideoSearchViewModel>(), Searchab
         })
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.common_recycler_view_layout, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = CommonRecyclerViewLayoutBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        swipeRefresh.isEnabled = false
+        binding.swipeRefresh.isEnabled = false
     }
 
     override fun search(query: String) {
@@ -52,7 +53,12 @@ class VideoSearchFragment : BaseVideosFragment<VideoSearchViewModel>(), Searchab
             )
         } else {
             adapter.submitList(null)
-            nothingHere?.gone()
+            binding.nothingHere.gone()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

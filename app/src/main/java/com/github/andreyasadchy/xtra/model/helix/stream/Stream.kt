@@ -4,7 +4,7 @@ import android.os.Parcelable
 import com.github.andreyasadchy.xtra.model.helix.tag.Tag
 import com.github.andreyasadchy.xtra.model.helix.user.User
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Stream(

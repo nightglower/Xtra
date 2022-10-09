@@ -12,11 +12,11 @@ import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.viewModels
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.DialogClipDownloadBinding
 import com.github.andreyasadchy.xtra.model.helix.clip.Clip
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.dialog_clip_download.*
 
 @AndroidEntryPoint
 class ClipDownloadDialog : BaseDownloadDialog() {
@@ -32,10 +32,15 @@ class ClipDownloadDialog : BaseDownloadDialog() {
         }
     }
 
+    override val baseBinding get() = binding.storageSelectionContainer
+    private var _binding: DialogClipDownloadBinding? = null
+    private val binding get() = _binding!!
     private val viewModel: ClipDownloadViewModel by viewModels()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View?  =
-            inflater.inflate(R.layout.dialog_clip_download, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = DialogClipDownloadBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
     @Deprecated("Deprecated in Java")
     @Suppress("UNCHECKED_CAST")
@@ -51,14 +56,21 @@ class ClipDownloadDialog : BaseDownloadDialog() {
     }
 
     private fun init(qualities: Map<String, String>) {
-        val context = requireContext()
-        init(context)
-        spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
-        cancel.setOnClickListener { dismiss() }
-        download.setOnClickListener {
-            val quality = spinner.selectedItem.toString()
-            viewModel.download(qualities.getValue(quality), downloadPath, quality)
-            dismiss()
+        with(binding) {
+            val context = requireContext()
+            init(context)
+            spinner.adapter = ArrayAdapter(context, R.layout.spinner_quality_item, qualities.keys.toTypedArray())
+            cancel.setOnClickListener { dismiss() }
+            download.setOnClickListener {
+                val quality = spinner.selectedItem.toString()
+                viewModel.download(qualities.getValue(quality), downloadPath, quality)
+                dismiss()
+            }
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

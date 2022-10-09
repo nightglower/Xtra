@@ -13,23 +13,26 @@ import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.viewModels
 import androidx.preference.*
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.databinding.ActivitySettingsBinding
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.settings.api.DragListFragment
 import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.activity_settings.*
 
 @AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
 
     var recreate = false
 
+    private lateinit var binding: ActivitySettingsBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyTheme()
-        setContentView(R.layout.activity_settings)
-        toolbar.navigationIcon = Utils.getNavigationIcon(this)
-        toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        binding = ActivitySettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.toolbar.navigationIcon = Utils.getNavigationIcon(this)
+        binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         recreate = savedInstanceState?.getBoolean(SettingsFragment.KEY_CHANGED) == true
         if (savedInstanceState == null || recreate) {
             recreate = false

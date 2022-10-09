@@ -34,7 +34,6 @@ import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
-import kotlinx.android.synthetic.main.view_chat.view.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -452,7 +451,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         if (messageView?.isVisible == true) {
             chatLayout.hideKeyboard()
             chatLayout.clearFocus()
-            chatLayout.emoteMenu.gone()
+            (this as? StreamPlayerFragment)?.hideEmotesMenu()
             messageView.gone()
             prefs.edit { putBoolean(C.KEY_CHAT_BAR_VISIBLE, false) }
         } else {
