@@ -21,7 +21,8 @@ import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker
+import com.google.android.exoplayer2.upstream.DefaultDataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.upstream.HttpDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,12 +63,6 @@ class StreamPlayerViewModel @Inject constructor(
     private var minSpeed: Float? = null
     private var maxSpeed: Float? = null
     private var targetOffset: Long? = null
-
-    private val hlsMediaSourceFactory = HlsMediaSource.Factory(dataSourceFactory)
-        .setAllowChunklessPreparation(true)
-        .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
-        .setPlaylistTrackerFactory(DefaultHlsPlaylistTracker.FACTORY)
-        .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
 
     fun startStream(account: Account, includeToken: Boolean?, helixClientId: String?, gqlClientId: String?, stream: Stream, useProxy: Int?, proxyUrl: String?, randomDeviceId: Boolean?, xDeviceId: String?, playerType: String?, minSpeed: String?, maxSpeed: String?, targetOffset: String?, updateStream: Boolean) {
         this.gqlClientId = gqlClientId
@@ -119,7 +114,7 @@ class StreamPlayerViewModel @Inject constructor(
             index < qualities.size - 1 -> startAudioOnly()
             else -> {
                 if (playerMode.value == NORMAL) {
-                    player.stop()
+                    player?.stop()
                 } else {
                     stopBackgroundAudio()
                 }
@@ -129,7 +124,7 @@ class StreamPlayerViewModel @Inject constructor(
     }
 
     fun startAudioOnly(showNotification: Boolean = false) {
-        (player.currentManifest as? HlsManifest)?.let {
+        (player?.currentManifest as? HlsManifest)?.let {
             _stream.value?.let { stream ->
                 helper.urls.values.lastOrNull()?.let {
                     startBackgroundAudio(it, stream.channelName, stream.title, stream.channelLogo, false, AudioPlayerService.TYPE_STREAM, null, showNotification)
@@ -139,9 +134,15 @@ class StreamPlayerViewModel @Inject constructor(
         }
     }
 
+    fun resumePlayer() {
+        if (playerMode.value == NORMAL) {
+            loadStream(stream.value ?: return)
+        }
+    }
+
     override fun onResume() {
         isResumed = true
-        userLeaveHint = false
+        pauseHandled = false
         if (playerMode.value == NORMAL) {
             loadStream(stream.value ?: return)
         } else if (playerMode.value == AUDIO_ONLY) {
@@ -154,11 +155,15 @@ class StreamPlayerViewModel @Inject constructor(
 
     override fun onPause() {
         isResumed = false
-        val context = getApplication<Application>()
-        if (!userLeaveHint && !isPaused() && playerMode.value == NORMAL && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
-            startAudioOnly(true)
-        } else {
-            super.onPause()
+        if (playerMode.value == NORMAL) {
+            val context = getApplication<Application>()
+            if (!pauseHandled && _isPlaying.value == true && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
+                startAudioOnly(true)
+            } else {
+                releasePlayer()
+            }
+        } else if (playerMode.value == AUDIO_ONLY) {
+            showAudioNotification()
         }
     }
 
@@ -184,22 +189,30 @@ class StreamPlayerViewModel @Inject constructor(
                             }
                         }
                         1 -> {
-                            if (result.second == 1) {
-                                httpDataSourceFactory.setDefaultRequestProperties(hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
-                            } else {
+                            if (result.second != 1) {
                                 val context = getApplication<Application>()
                                 context.toast(R.string.adblock_not_working)
                                 useProxy = 2
                             }
                         }
                     }
-                    mediaSource = hlsMediaSourceFactory.createMediaSource(
-                        MediaItem.Builder().setUri(result.first).setLiveConfiguration(MediaItem.LiveConfiguration.Builder().apply {
+                    val context = getApplication<Application>()
+                    mediaSourceFactory = HlsMediaSource.Factory(DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory().apply {
+                        if (result.second == 1) {
+                            setDefaultRequestProperties(hashMapOf("X-Donate-To" to "https://ttv.lol/donate"))
+                        }
+                    }))
+                        .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                        .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(6))
+                    mediaItem = MediaItem.Builder().apply {
+                        setUri(result.first)
+                        setLiveConfiguration(MediaItem.LiveConfiguration.Builder().apply {
                             minSpeed?.let { setMinPlaybackSpeed(it) }
                             maxSpeed?.let { setMaxPlaybackSpeed(it) }
                             targetOffset?.let { setTargetOffsetMs(it) }
-                        }.build()).build())
-                    play()
+                        }.build())
+                    }.build()
+                    initializePlayer()
                 }
             } catch (e: Exception) {
                 val context = getApplication<Application>()
@@ -209,9 +222,8 @@ class StreamPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player.playerError
+        val playerError = player?.playerError
         Log.e(tag, "Player error", playerError)
-        playbackPosition = player.currentPosition
         val context = getApplication<Application>()
         if (context.isNetworkAvailable) {
             try {

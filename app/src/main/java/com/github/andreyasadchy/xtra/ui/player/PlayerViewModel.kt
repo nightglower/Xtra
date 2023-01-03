@@ -24,12 +24,8 @@ import com.google.android.exoplayer2.Player.EVENT_PLAY_WHEN_READY_CHANGED
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
 import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
-import com.google.android.exoplayer2.upstream.DefaultDataSource
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.HttpDataSource
-import com.google.android.exoplayer2.util.Util
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
@@ -40,35 +36,13 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
 
     protected val tag: String = javaClass.simpleName
 
-    protected val httpDataSourceFactory = DefaultHttpDataSource.Factory().setUserAgent(Util.getUserAgent(context, context.getString(R.string.app_name)))
-    protected val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
+    var player: ExoPlayer? = null
+    protected var mediaSourceFactory: MediaSource.Factory? = null
+    protected lateinit var mediaItem: MediaItem //TODO maybe redo these viewmodels to custom players
 
-    protected val trackSelector = DefaultTrackSelector(context)
-    private val useFirstDecoder = context.prefs().getBoolean(C.PLAYER_FORCE_FIRST_DECODER, false)
-    private val rewind = context.prefs().getString(C.PLAYER_REWIND, "10000")!!.toLong()
-    private val forward = context.prefs().getString(C.PLAYER_FORWARD, "10000")!!.toLong()
-    private val minBuffer = context.prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000
-    private val maxBuffer = context.prefs().getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000
-    private val playbackBuffer = context.prefs().getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000
-    private val rebuffer = context.prefs().getString(C.PLAYER_BUFFER_REBUFFER, "5000")?.toIntOrNull() ?: 5000
-    val player: ExoPlayer = ExoPlayer.Builder(context).apply {
-        if (useFirstDecoder) {
-            setRenderersFactory(DefaultRenderersFactory(context).setMediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
-                MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder).firstOrNull()?.let {
-                    listOf(it)
-                } ?: emptyList()
-            })
-        }
-        setTrackSelector(trackSelector)
-        setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(minBuffer, maxBuffer, playbackBuffer, rebuffer).build())
-        setSeekBackIncrementMs(rewind)
-        setSeekForwardIncrementMs(forward)
-    }.build().apply { addListener(this@PlayerViewModel) }
-    protected lateinit var mediaSource: MediaSource //TODO maybe redo these viewmodels to custom players
-
-    protected val _currentPlayer = MutableLiveData<ExoPlayer>().apply { value = player }
-    val currentPlayer: LiveData<ExoPlayer>
-        get() = _currentPlayer
+    protected val _playerUpdated = MutableLiveData<Boolean>()
+    val playerUpdated: LiveData<Boolean>
+        get() = _playerUpdated
     protected val _playerMode = MutableLiveData<PlayerMode>().apply { value = PlayerMode.NORMAL }
     val playerMode: LiveData<PlayerMode>
         get() = _playerMode
@@ -80,7 +54,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     protected var binder: AudioPlayerService.AudioBinder? = null
 
     protected var isResumed = true
-    var userLeaveHint = false
+    var pauseHandled = false
 
     lateinit var mediaSession: MediaSessionCompat
     lateinit var mediaSessionConnector: MediaSessionConnector
@@ -88,11 +62,9 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     private val _showPauseButton = MutableLiveData<Boolean>()
     val showPauseButton: LiveData<Boolean>
         get() = _showPauseButton
-
-    private val _isPlaying = MutableLiveData<Boolean>()
+    protected val _isPlaying = MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean>
         get() = _isPlaying
-
     private val _subtitlesAvailable = MutableLiveData<Boolean>()
     val subtitlesAvailable: LiveData<Boolean>
         get() = _subtitlesAvailable
@@ -127,33 +99,61 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
         }
     }
 
-    fun isPaused(): Boolean {
-        return !player.isPlaying && player.playbackState == Player.STATE_READY
-    }
-
     open fun onResume() {
-        play()
+        initializePlayer()
     }
 
     open fun onPause() {
-        player.stop()
+        releasePlayer()
     }
 
     open fun restartPlayer() {
-        playbackPosition = currentPlayer.value!!.currentPosition
-        player.stop()
-        play()
-        player.seekTo(playbackPosition)
+        playbackPosition = player?.currentPosition ?: 0
+        player?.stop()
+        initializePlayer()
+        player?.seekTo(playbackPosition)
     }
 
-    protected fun play() {
-        if (this::mediaSource.isInitialized) { //TODO
-            player.setMediaSource(mediaSource)
-            player.prepare()
-            player.playWhenReady = true
+    protected fun initializePlayer() {
+        if (player == null) {
+            val context = getApplication<Application>()
+            player = ExoPlayer.Builder(context).apply {
+                if (context.prefs().getBoolean(C.PLAYER_FORCE_FIRST_DECODER, false)) {
+                    setRenderersFactory(DefaultRenderersFactory(context).setMediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
+                        MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder).firstOrNull()?.let {
+                            listOf(it)
+                        } ?: emptyList()
+                    })
+                }
+                mediaSourceFactory?.let { setMediaSourceFactory(it) }
+                setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(
+                    context.prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
+                    context.prefs().getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,
+                    context.prefs().getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000,
+                    context.prefs().getString(C.PLAYER_BUFFER_REBUFFER, "5000")?.toIntOrNull() ?: 5000
+                ).build())
+                setSeekBackIncrementMs(context.prefs().getString(C.PLAYER_REWIND, "10000")?.toLongOrNull() ?: 10000)
+                setSeekForwardIncrementMs(context.prefs().getString(C.PLAYER_FORWARD, "10000")?.toLongOrNull() ?: 10000)
+            }.build().apply {
+                addListener(this@PlayerViewModel)
+                playWhenReady = true
+            }
+            _playerUpdated.postValue(true)
+        }
+        if (this::mediaItem.isInitialized) {
+            player?.setMediaItem(mediaItem)
+            player?.prepare()
             mediaSessionConnector.setPlayer(player)
             mediaSession.isActive = true
         }
+    }
+
+    protected fun releasePlayer() {
+        player?.release()
+        player = null
+        _playerUpdated.postValue(true)
+        mediaSessionConnector.setPlayer(null)
+        mediaSession.isActive = false
     }
 
     protected fun startBackgroundAudio(playlistUrl: String, channelName: String?, title: String?, imageUrl: String?, usePlayPause: Boolean, type: Int, videoId: Number?, showNotification: Boolean) {
@@ -164,11 +164,11 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
             putExtra(AudioPlayerService.KEY_TITLE, title)
             putExtra(AudioPlayerService.KEY_IMAGE_URL, imageUrl)
             putExtra(AudioPlayerService.KEY_USE_PLAY_PAUSE, usePlayPause)
-            putExtra(AudioPlayerService.KEY_CURRENT_POSITION, player.currentPosition)
+            putExtra(AudioPlayerService.KEY_CURRENT_POSITION, player?.currentPosition)
             putExtra(AudioPlayerService.KEY_TYPE, type)
             putExtra(AudioPlayerService.KEY_VIDEO_ID, videoId)
         }
-        player.stop()
+        releasePlayer()
         val connection = object : ServiceConnection {
 
             override fun onServiceDisconnected(name: ComponentName) {
@@ -176,7 +176,8 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
 
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
                 binder = service as AudioPlayerService.AudioBinder
-                _currentPlayer.value = service.player
+                player = service.player
+                _playerUpdated.postValue(true)
                 if (showNotification) {
                     showAudioNotification()
                 }
@@ -202,13 +203,13 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
             binder?.hideNotification()
         } else {
             qualityIndex = previousQuality
-            _currentPlayer.value = player
-            play()
-            player.seekTo(AudioPlayerService.position)
+            releasePlayer()
+            initializePlayer()
+            player?.seekTo(AudioPlayerService.position)
         }
     }
 
-    //Player.EventListener
+    //Player.Listener
 
     override fun onEvents(player: Player, events: Player.Events) {
         if (events.containsAny(EVENT_PLAYBACK_STATE_CHANGED, EVENT_PLAY_WHEN_READY_CHANGED)) {
@@ -226,9 +227,9 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player.playerError
+        val playerError = player?.playerError
         Log.e(tag, "Player error", playerError)
-        playbackPosition = player.currentPosition
+        playbackPosition = player?.currentPosition ?: 0
         val context = getApplication<Application>()
         if (context.isNetworkAvailable) {
             try {
@@ -263,37 +264,37 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     override fun onCleared() {
-        player.release()
+        releasePlayer()
         timer?.cancel()
-        mediaSessionConnector.setPlayer(null)
-        mediaSession.isActive = false
     }
 
     fun setSpeed(speed: Float) {
-        player.playbackParameters = PlaybackParameters(speed)
+        player?.playbackParameters = PlaybackParameters(speed)
     }
 
     fun setVolume(volume: Float) {
-        player.volume = volume
+        player?.volume = volume
     }
 
     fun subtitlesEnabled(): Boolean {
-        return player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.isSelected == true
+        return player?.currentTracks?.groups?.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.isSelected == true
     }
 
     fun toggleSubtitles(enabled: Boolean) {
-        if (enabled) {
-            player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.let {
+        player?.let { player ->
+            if (enabled) {
+                player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_TEXT }?.let {
+                    player.trackSelectionParameters = player.trackSelectionParameters
+                        .buildUpon()
+                        .setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, 0))
+                        .build()
+                }
+            } else {
                 player.trackSelectionParameters = player.trackSelectionParameters
                     .buildUpon()
-                    .setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup,0))
+                    .clearOverridesOfType(com.google.android.exoplayer2.C.TRACK_TYPE_TEXT)
                     .build()
             }
-        } else {
-            player.trackSelectionParameters = player.trackSelectionParameters
-                .buildUpon()
-                .clearOverridesOfType(com.google.android.exoplayer2.C.TRACK_TYPE_TEXT)
-                .build()
         }
     }
 }

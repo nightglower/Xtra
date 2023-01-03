@@ -11,8 +11,6 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -33,24 +31,19 @@ class OfflinePlayerViewModel @Inject constructor(
         val context = getApplication<Application>()
         if (!this::video.isInitialized) {
             this.video = video
-            val mediaSourceFactory = if (video.vod) {
-                HlsMediaSource.Factory(dataSourceFactory)
-            } else {
-                ProgressiveMediaSource.Factory(dataSourceFactory)
-            }
-            mediaSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(video.url.toUri()))
-            play()
-            player.seekTo(if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) video.lastWatchPosition ?: 0 else 0)
+            mediaItem = MediaItem.fromUri(video.url.toUri())
+            initializePlayer()
+            player?.seekTo(if (context.prefs().getBoolean(C.PLAYER_USE_VIDEOPOSITIONS, true)) video.lastWatchPosition ?: 0 else 0)
         }
     }
 
     override fun onResume() {
         isResumed = true
-        userLeaveHint = false
+        pauseHandled = false
         if (playerMode.value == PlayerMode.NORMAL) {
-            super.onResume()
-            player.seekTo(playbackPosition)
-        } else {
+            initializePlayer()
+            player?.seekTo(playbackPosition)
+        } else if (playerMode.value == PlayerMode.AUDIO_ONLY) {
             hideAudioNotification()
             if (qualityIndex == 0) {
                 changeQuality(qualityIndex)
@@ -61,14 +54,14 @@ class OfflinePlayerViewModel @Inject constructor(
     override fun onPause() {
         isResumed = false
         if (playerMode.value == PlayerMode.NORMAL) {
-            playbackPosition = player.currentPosition
+            playbackPosition = player?.currentPosition ?: 0
             val context = getApplication<Application>()
-            if (!userLeaveHint && !isPaused() && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
+            if (!pauseHandled && _isPlaying.value == true && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
                 startAudioOnly(true)
             } else {
-                super.onPause()
+                releasePlayer()
             }
-        } else {
+        } else if (playerMode.value == PlayerMode.AUDIO_ONLY) {
             showAudioNotification()
         }
     }
@@ -76,11 +69,11 @@ class OfflinePlayerViewModel @Inject constructor(
     override fun changeQuality(index: Int) {
         qualityIndex = index
         if (qualityIndex == 0) {
-            playbackPosition = currentPlayer.value!!.currentPosition
+            playbackPosition = player?.currentPosition ?: 0
             stopBackgroundAudio()
-            _currentPlayer.value = player
-            play()
-            player.seekTo(playbackPosition)
+            releasePlayer()
+            initializePlayer()
+            player?.seekTo(playbackPosition)
             _playerMode.value = PlayerMode.NORMAL
         } else {
             startAudioOnly()
@@ -94,10 +87,13 @@ class OfflinePlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         if (playerMode.value == PlayerMode.NORMAL) {
-            repository.updateVideoPosition(video.id, player.currentPosition)
-        } else if (isResumed) {
-            stopBackgroundAudio()
+            player?.currentPosition?.let { position ->
+                repository.updateVideoPosition(video.id, position)
+            }
         }
         super.onCleared()
+        if (playerMode.value == PlayerMode.AUDIO_ONLY && isResumed) {
+            stopBackgroundAudio()
+        }
     }
 }

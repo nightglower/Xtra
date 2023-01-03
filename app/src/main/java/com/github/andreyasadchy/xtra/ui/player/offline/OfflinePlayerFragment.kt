@@ -64,7 +64,7 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, viewModel.qualities, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed)
+                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, viewModel.qualities, viewModel.qualityIndex, viewModel.player?.playbackParameters?.speed ?: 1f)
             }
         }
         if (prefs.getBoolean(C.PLAYER_MODE, false)) {
@@ -81,14 +81,6 @@ class OfflinePlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.On
 
     override fun onNetworkRestored() {
         //do nothing
-    }
-
-    override fun onMovedToForeground() {
-        viewModel.onResume()
-    }
-
-    override fun onMovedToBackground() {
-        viewModel.onPause()
     }
 
     override fun onChange(requestCode: Int, index: Int, text: CharSequence, tag: Int?) {

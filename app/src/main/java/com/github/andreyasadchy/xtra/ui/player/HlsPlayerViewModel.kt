@@ -18,11 +18,10 @@ import com.github.andreyasadchy.xtra.util.prefs
 import com.google.android.exoplayer2.Timeline
 import com.google.android.exoplayer2.Tracks
 import com.google.android.exoplayer2.source.hls.HlsManifest
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
 import java.util.*
 import java.util.regex.Pattern
 
-private const val VIDEO_RENDERER = 0
 
 abstract class HlsPlayerViewModel(
     context: Application,
@@ -41,8 +40,26 @@ abstract class HlsPlayerViewModel(
     }
 
     protected fun setVideoQuality(index: Int) {
+        val mode = _playerMode.value
+        if (mode != NORMAL) {
+            _playerMode.value = NORMAL
+            if (mode == AUDIO_ONLY) {
+                stopBackgroundAudio()
+                playbackPosition = player?.currentPosition ?: 0
+                releasePlayer()
+                initializePlayer()
+                player?.seekTo(playbackPosition)
+            } else {
+                restartPlayer()
+            }
+        }
         val quality = if (index == 0) {
-            trackSelector.setParameters(trackSelector.buildUponParameters().clearSelectionOverrides())
+            player?.let { player ->
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .clearOverridesOfType(com.google.android.exoplayer2.C.TRACK_TYPE_VIDEO)
+                    .build()
+            }
             "Auto"
         } else {
             updateVideoQuality()
@@ -52,73 +69,71 @@ abstract class HlsPlayerViewModel(
         if (context.prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved") == "saved") {
             context.prefs().edit { putString(C.PLAYER_QUALITY, quality) }
         }
-        val mode = _playerMode.value
-        if (mode != NORMAL) {
-            _playerMode.value = NORMAL
-            if (mode == AUDIO_ONLY) {
-                stopBackgroundAudio()
-                restartPlayer()
-                _currentPlayer.value = player
-            } else {
-                restartPlayer()
-            }
-        }
     }
 
     private fun updateVideoQuality() {
-        trackSelector.currentMappedTrackInfo?.let { //TODO
-            trackSelector.parameters = trackSelector.buildUponParameters()
-                    .setSelectionOverride(VIDEO_RENDERER, it.getTrackGroups(VIDEO_RENDERER), DefaultTrackSelector.SelectionOverride(0, qualityIndex - 1))
-                    .build()
+        player?.let { player ->
+            if (!player.currentTracks.isEmpty) {
+                player.currentTracks.groups.find { it.type == com.google.android.exoplayer2.C.TRACK_TYPE_VIDEO }?.let {
+                    if (it.length >= qualityIndex - 1) {
+                        player.trackSelectionParameters = player.trackSelectionParameters
+                            .buildUpon()
+                            .setOverrideForType(TrackSelectionOverride(it.mediaTrackGroup, qualityIndex - 1))
+                            .build()
+                    }
+                }
+            }
         }
     }
 
     override fun onTracksChanged(tracks: Tracks) {
         super.onTracksChanged(tracks)
-        if (trackSelector.currentMappedTrackInfo != null) {
-            if (helper.loaded.value != true) {
-                val context = getApplication<Application>()
-                val defaultQuality = context.prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved")
-                val savedQuality = context.prefs().getString(C.PLAYER_QUALITY, "720p60")
-                val index = when (defaultQuality) {
-                    "Auto" -> 0
-                    "Source" -> if (helper.urls.size >= 2) 1 else 0
-                    "saved" -> {
-                        if (savedQuality == "Auto") {
-                            0
-                        } else {
-                            qualities.indexOf(savedQuality).let { if (it != -1) it else 0 }
+        player?.let { player ->
+            if (!player.currentTracks.isEmpty) {
+                if (helper.loaded.value != true) {
+                    val context = getApplication<Application>()
+                    val defaultQuality = context.prefs().getString(C.PLAYER_DEFAULTQUALITY, "saved")
+                    val savedQuality = context.prefs().getString(C.PLAYER_QUALITY, "720p60")
+                    val index = when (defaultQuality) {
+                        "Auto" -> 0
+                        "Source" -> if (helper.urls.size >= 2) 1 else 0
+                        "saved" -> {
+                            if (savedQuality == "Auto") {
+                                0
+                            } else {
+                                qualities.indexOf(savedQuality).let { if (it != -1) it else 0 }
+                            }
                         }
-                    }
-                    else -> {
-                        var index = 0
-                        if (defaultQuality != null) {
-                            for (i in qualities.withIndex()) {
-                                val comp = i.value.take(4).filter { it.isDigit() }
-                                if (comp != "") {
-                                    if (defaultQuality.toInt() >= comp.toInt()) {
-                                        index = i.index
-                                        break
+                        else -> {
+                            var index = 0
+                            if (defaultQuality != null) {
+                                for (i in qualities.withIndex()) {
+                                    val comp = i.value.take(4).filter { it.isDigit() }
+                                    if (comp != "") {
+                                        if (defaultQuality.toInt() >= comp.toInt()) {
+                                            index = i.index
+                                            break
+                                        }
                                     }
                                 }
                             }
+                            index
                         }
-                        index
                     }
+                    qualityIndex = index
+                    helper.loaded.value = true
                 }
-                qualityIndex = index
-                helper.loaded.value = true
-            }
-            if (qualityIndex != 0) {
-                updateVideoQuality()
+                if (qualityIndex != 0) {
+                    updateVideoQuality()
+                }
             }
         }
     }
 
     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-        val manifest = player.currentManifest
+        val manifest = player?.currentManifest
         if (helper.urls.isEmpty() && manifest is HlsManifest) {
-            manifest.masterPlaylist.let {
+            manifest.multivariantPlaylist.let {
                 val context = getApplication<Application>()
                 val tags = it.tags
                 val urls = LinkedHashMap<String, String>(tags.size)
@@ -151,15 +166,6 @@ abstract class HlsPlayerViewModel(
     override fun setUser(account: Account, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, setting: Int) {
         if (!this::follow.isInitialized) {
             follow = FollowLiveData(localFollowsChannel = localFollowsChannel, userId = userId, userLogin = userLogin, userName = userName, channelLogo = channelLogo, repository = repository, helixClientId = helixClientId, account = account, gqlClientId = gqlClientId, gqlClientId2 = gqlClientId2, setting = setting, viewModelScope = viewModelScope)
-        }
-    }
-
-    override fun onPause() {
-        if (playerMode.value == NORMAL) {
-            helper.loaded.value = false
-            super.onPause()
-        } else if (playerMode.value == AUDIO_ONLY) {
-            showAudioNotification()
         }
     }
 

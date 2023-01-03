@@ -229,8 +229,8 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     override fun initialize() {
         val activity = requireActivity() as MainActivity
         val view = requireView()
-        viewModel.currentPlayer.observe(viewLifecycleOwner) {
-            playerView.player = it
+        viewModel.playerUpdated.observe(viewLifecycleOwner) {
+            playerView.player = viewModel.player
         }
         viewModel.playerMode.observe(viewLifecycleOwner) {
             if (it == PlayerMode.NORMAL) {
@@ -510,12 +510,12 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         }
     }
 
-    fun setUserLeaveHint() {
-        viewModel.userLeaveHint = true
+    fun setPauseHandled() {
+        viewModel.pauseHandled = true
     }
 
-    fun isPaused(): Boolean {
-        return viewModel.isPaused()
+    fun isPlaying(): Boolean {
+        return viewModel.isPlaying.value == true
     }
 
     fun setSubtitles(available: Boolean? = null, enabled: Boolean? = null) {
@@ -540,5 +540,13 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     fun toggleSubtitles(enabled: Boolean) {
         setSubtitles(enabled = enabled)
         viewModel.toggleSubtitles(enabled)
+    }
+
+    override fun onMovedToForeground() {
+        viewModel.onResume()
+    }
+
+    override fun onMovedToBackground() {
+        viewModel.onPause()
     }
 }

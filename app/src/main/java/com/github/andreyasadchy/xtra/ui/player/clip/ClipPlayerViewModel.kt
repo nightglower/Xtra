@@ -23,7 +23,6 @@ import com.github.andreyasadchy.xtra.util.shortToast
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,7 +35,6 @@ class ClipPlayerViewModel @Inject constructor(
     private val localFollowsChannel: LocalFollowChannelRepository) : PlayerViewModel(context), FollowViewModel {
 
     private lateinit var clip: Clip
-    private val factory: ProgressiveMediaSource.Factory = ProgressiveMediaSource.Factory(dataSourceFactory)
     private val prefs = context.prefs()
     private val helper = PlayerHelper()
     val qualities: Map<String, String>
@@ -63,7 +61,7 @@ class ClipPlayerViewModel @Inject constructor(
     }
 
     override fun changeQuality(index: Int) {
-        playbackPosition = player.currentPosition
+        playbackPosition = player?.currentPosition ?: 0
         val quality = helper.urls.values.elementAt(index)
         play(quality)
         if (prefs.getString(C.PLAYER_DEFAULTQUALITY, "saved") == "saved") {
@@ -72,14 +70,24 @@ class ClipPlayerViewModel @Inject constructor(
         qualityIndex = index
     }
 
+    fun resumePlayer() {
+        initializePlayer()
+        player?.seekTo(playbackPosition)
+    }
+
+    fun stopPlayer() {
+        playbackPosition = player?.currentPosition ?: 0
+        player?.stop()
+    }
+
     override fun onResume() {
-        super.onResume()
-        player.seekTo(playbackPosition)
+        initializePlayer()
+        player?.seekTo(playbackPosition)
     }
 
     override fun onPause() {
-        playbackPosition = player.currentPosition
-        super.onPause()
+        playbackPosition = player?.currentPosition ?: 0
+        releasePlayer()
     }
 
     fun setClip(clip: Clip) {
@@ -147,7 +155,7 @@ class ClipPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player.playerError
+        val playerError = player?.playerError
         if (playerError?.type == ExoPlaybackException.TYPE_UNEXPECTED && playerError.unexpectedException is IllegalStateException) {
             val context = getApplication<Application>()
             context.shortToast(R.string.player_error)
@@ -158,8 +166,8 @@ class ClipPlayerViewModel @Inject constructor(
     }
 
     private fun play(url: String) {
-        mediaSource = factory.createMediaSource(MediaItem.fromUri(url.toUri()))
-        play()
-        player.seekTo(playbackPosition)
+        mediaItem = MediaItem.fromUri(url.toUri())
+        initializePlayer()
+        player?.seekTo(playbackPosition)
     }
 }

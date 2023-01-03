@@ -89,7 +89,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, if (viewModel.loaded.value == true) viewModel.qualities else null, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed, !viewModel.gamesList.value.isNullOrEmpty())
+                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, if (viewModel.loaded.value == true) viewModel.qualities else null, viewModel.qualityIndex, viewModel.player?.playbackParameters?.speed ?: 1f, !viewModel.gamesList.value.isNullOrEmpty())
             }
         }
         if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
@@ -155,7 +155,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
     }
 
     override fun seek(position: Long) {
-        viewModel.seek(position)
+        viewModel.player?.seekTo(position)
     }
 
     override fun showDownloadDialog() {
@@ -164,29 +164,20 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         }
     }
 
-    override fun onMovedToForeground() {
-        viewModel.onResume()
-    }
-
-    override fun onMovedToBackground() {
-        viewModel.onPause()
-    }
-
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.onResume()
+            viewModel.resumePlayer()
         }
     }
 
     override fun onNetworkLost() {
         if (isResumed) {
-            setUserLeaveHint()
-            viewModel.onPause()
+            viewModel.stopPlayer()
         }
     }
 
     override fun getCurrentPosition(): Double {
-        return runBlocking(Dispatchers.Main) { viewModel.currentPlayer.value!!.currentPosition / 1000.0 }
+        return runBlocking(Dispatchers.Main) { (viewModel.player?.currentPosition ?: 0) / 1000.0 }
     }
 
     fun startAudioOnly() {

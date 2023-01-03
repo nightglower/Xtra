@@ -31,6 +31,8 @@ import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
+import com.google.android.exoplayer2.upstream.DefaultDataSource
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.HttpDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
@@ -49,7 +51,7 @@ class VideoPlayerViewModel @Inject constructor(
     private lateinit var video: Video
     val videoInfo: VideoDownloadInfo?
         get() {
-            val playlist = (player.currentManifest as? HlsManifest)?.mediaPlaylist ?: return null
+            val playlist = (player?.currentManifest as? HlsManifest)?.mediaPlaylist ?: return null
             val segments = playlist.segments
             val size = segments.size
             val relativeTimes = ArrayList<Long>(size)
@@ -59,7 +61,7 @@ class VideoPlayerViewModel @Inject constructor(
                 relativeTimes.add(segment.relativeStartTimeUs / 1000L)
                 durations.add(segment.durationUs / 1000L)
             }
-            return VideoDownloadInfo(video, helper.urls, relativeTimes, durations, playlist.durationUs / 1000L, playlist.targetDurationUs / 1000L, player.currentPosition)
+            return VideoDownloadInfo(video, helper.urls, relativeTimes, durations, playlist.durationUs / 1000L, playlist.targetDurationUs / 1000L, player?.currentPosition ?: 0)
         }
 
     override val userId: String?
@@ -76,9 +78,6 @@ class VideoPlayerViewModel @Inject constructor(
     private var isLoading = false
     private var startOffset: Long = 0
     private var shouldRetry = true
-
-    private val hlsMediaSourceFactory = HlsMediaSource.Factory(dataSourceFactory)
-        .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
 
     init {
         val speed = context.prefs().getFloat(C.PLAYER_SPEED, 1f)
@@ -103,10 +102,6 @@ class VideoPlayerViewModel @Inject constructor(
         }
     }
 
-    fun seek(position: Long) {
-        player.seekTo(position)
-    }
-
     fun setVideo(video: Video, offset: Double) {
         if (!this::video.isInitialized) {
             this.video = video
@@ -118,10 +113,10 @@ class VideoPlayerViewModel @Inject constructor(
     private fun playVideo(skipAccessToken: Boolean) {
         viewModelScope.launch {
             try {
+                val context = getApplication<Application>()
                 val url = if (skipAccessToken && !video.animatedPreviewURL.isNullOrBlank()) {
                     TwitchApiHelper.getVideoUrlFromPreview(video.animatedPreviewURL!!, video.type).toUri()
                 } else {
-                    val context = getApplication<Application>()
                     playerRepository.loadVideoPlaylistUrl(
                         gqlClientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
                         gqlToken = if (context.prefs().getBoolean(C.TOKEN_INCLUDE_TOKEN_VIDEO, true)) Account.get(context).gqlToken else null,
@@ -129,10 +124,12 @@ class VideoPlayerViewModel @Inject constructor(
                         playerType = context.prefs().getString(C.TOKEN_PLAYERTYPE_VIDEO, "channel_home_live")
                     )
                 }
-                mediaSource = hlsMediaSourceFactory.createMediaSource(MediaItem.fromUri(url))
-                play()
+                mediaSourceFactory = HlsMediaSource.Factory(DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory()))
+                    .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
+                mediaItem = MediaItem.fromUri(url)
+                initializePlayer()
                 if (startOffset > 0) {
-                    player.seekTo(startOffset)
+                    player?.seekTo(startOffset)
                 }
             } catch (e: Exception) {
 
@@ -147,11 +144,11 @@ class VideoPlayerViewModel @Inject constructor(
             index < qualities.lastIndex -> {
                 val audioOnly = playerMode.value == PlayerMode.AUDIO_ONLY
                 if (audioOnly) {
-                    playbackPosition = currentPlayer.value!!.currentPosition
+                    playbackPosition = player?.currentPosition ?: 0
                 }
                 setVideoQuality(index)
                 if (audioOnly) {
-                    player.seekTo(playbackPosition)
+                    player?.seekTo(playbackPosition)
                 }
             }
             index == qualities.lastIndex -> startAudioOnly()
@@ -159,7 +156,7 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     fun startAudioOnly(showNotification: Boolean = false) {
-        (player.currentManifest as? HlsManifest)?.let {
+        (player?.currentManifest as? HlsManifest)?.let {
             helper.urls.values.lastOrNull()?.let {
                 startBackgroundAudio(it, video.channelName, video.title, video.channelLogo, true, AudioPlayerService.TYPE_VIDEO, video.id?.toLongOrNull(), showNotification)
                 _playerMode.value = PlayerMode.AUDIO_ONLY
@@ -167,37 +164,48 @@ class VideoPlayerViewModel @Inject constructor(
         }
     }
 
+    fun resumePlayer() {
+        initializePlayer()
+        player?.seekTo(playbackPosition)
+    }
+
+    fun stopPlayer() {
+        playbackPosition = player?.currentPosition ?: 0
+        helper.loaded.value = false
+        player?.stop()
+    }
+
     override fun onResume() {
         isResumed = true
-        userLeaveHint = false
+        pauseHandled = false
         if (playerMode.value == PlayerMode.NORMAL) {
-            super.onResume()
+            initializePlayer()
+            player?.seekTo(playbackPosition)
         } else if (playerMode.value == PlayerMode.AUDIO_ONLY) {
             hideAudioNotification()
             if (qualityIndex != qualities.lastIndex) {
                 changeQuality(qualityIndex)
             }
         }
-        if (playerMode.value != PlayerMode.AUDIO_ONLY) {
-            player.seekTo(playbackPosition)
-        }
     }
 
     override fun onPause() {
         isResumed = false
-        if (playerMode.value != PlayerMode.AUDIO_ONLY) {
-            playbackPosition = player.currentPosition
-        }
-        val context = getApplication<Application>()
-        if (!userLeaveHint && !isPaused() && playerMode.value == PlayerMode.NORMAL && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
-            startAudioOnly(true)
-        } else {
-            super.onPause()
+        if (playerMode.value == PlayerMode.NORMAL) {
+            playbackPosition = player?.currentPosition ?: 0
+            val context = getApplication<Application>()
+            if (!pauseHandled && _isPlaying.value == true && context.prefs().getBoolean(C.PLAYER_LOCK_SCREEN_AUDIO, true)) {
+                startAudioOnly(true)
+            } else {
+                releasePlayer()
+            }
+        } else if (playerMode.value == PlayerMode.AUDIO_ONLY) {
+            showAudioNotification()
         }
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player.playerError
+        val playerError = player?.playerError
         if (playerError != null) {
             if (playerError.type == ExoPlaybackException.TYPE_SOURCE &&
                 playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException }) {
@@ -226,7 +234,11 @@ class VideoPlayerViewModel @Inject constructor(
 
     override fun onCleared() {
         if (playerMode.value == PlayerMode.NORMAL && this::video.isInitialized) { //TODO
-            video.id?.toLongOrNull()?.let { playerRepository.saveVideoPosition(VideoPosition(it, player.currentPosition)) }
+            video.id?.toLongOrNull()?.let { id ->
+                player?.currentPosition?.let { position ->
+                    playerRepository.saveVideoPosition(VideoPosition(id, position))
+                }
+            }
         }
         super.onCleared()
     }

@@ -112,7 +112,7 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, if (viewModel.loaded.value == true) viewModel.qualities else null, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed)
+                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, if (viewModel.loaded.value == true) viewModel.qualities else null, viewModel.qualityIndex, viewModel.player?.playbackParameters?.speed ?: 1f)
             }
         }
         if (prefs.getBoolean(C.PLAYER_RESTART, true)) {
@@ -192,17 +192,9 @@ class StreamPlayerFragment : BasePlayerFragment(), RadioButtonDialogFragment.OnS
 
     override fun onChangeSpeed(speed: Float) {}
 
-    override fun onMovedToForeground() {
-        viewModel.onResume()
-    }
-
-    override fun onMovedToBackground() {
-        viewModel.onPause()
-    }
-
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.onResume()
+            viewModel.resumePlayer()
         }
     }
 

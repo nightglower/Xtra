@@ -85,7 +85,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         if (prefs.getBoolean(C.PLAYER_MENU, true)) {
             playerMenu.visible()
             playerMenu.setOnClickListener {
-                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, viewModel.qualities.keys, viewModel.qualityIndex, viewModel.currentPlayer.value!!.playbackParameters.speed)
+                FragmentUtils.showPlayerSettingsDialog(childFragmentManager, viewModel.qualities.keys, viewModel.qualityIndex, viewModel.player?.playbackParameters?.speed ?: 1f)
             }
         }
         if (prefs.getBoolean(C.PLAYER_DOWNLOAD, false)) {
@@ -104,7 +104,7 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                     profileImageUrl = clip.profileImageUrl,
                     animatedPreviewURL = clip.videoAnimatedPreviewURL
                 ), (if (clip.vodOffset != null) {
-                    (clip.vodOffset?.toDouble() ?: 0.0) * 1000.0 + viewModel.player.currentPosition
+                    ((clip.vodOffset?.toDouble() ?: 0.0) * 1000.0) + (viewModel.player?.currentPosition ?: 0)
                 } else {
                     0.0
                 }))
@@ -134,28 +134,20 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
         }
     }
 
-    override fun onMovedToForeground() {
-        viewModel.onResume()
-    }
-
-    override fun onMovedToBackground() {
-        viewModel.onPause()
-    }
-
     override fun onNetworkRestored() {
         if (isResumed) {
-            viewModel.onResume()
+            viewModel.resumePlayer()
         }
     }
 
     override fun onNetworkLost() {
         if (isResumed) {
-            viewModel.onPause()
+            viewModel.stopPlayer()
         }
     }
 
     override fun getCurrentPosition(): Double {
-        return runBlocking(Dispatchers.Main) { viewModel.currentPlayer.value!!.currentPosition / 1000.0 }
+        return runBlocking(Dispatchers.Main) { (viewModel.player?.currentPosition ?: 0) / 1000.0 }
     }
 
     companion object {
