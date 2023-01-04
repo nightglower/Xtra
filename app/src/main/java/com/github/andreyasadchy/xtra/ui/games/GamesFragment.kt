@@ -20,9 +20,16 @@ import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.*
+import com.google.android.gms.cast.framework.CastButtonFactory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import kotlinx.android.synthetic.main.fragment_channel.*
 import kotlinx.android.synthetic.main.fragment_games.*
+import kotlinx.android.synthetic.main.fragment_games.appBar
+import kotlinx.android.synthetic.main.fragment_games.castButton
+import kotlinx.android.synthetic.main.fragment_games.menu
+import kotlinx.android.synthetic.main.fragment_games.search
+import kotlinx.android.synthetic.main.fragment_media_pager_toolbar.*
 
 @AndroidEntryPoint
 class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapter<Game>>(), Scrollable {
@@ -57,6 +64,10 @@ class GamesFragment : PagedListFragment<Game, GamesViewModel, BasePagedListAdapt
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
+        if (requireContext().prefs().getBoolean(C.SHOW_CAST, true)) {
+            castButton.visible()
+            CastButtonFactory.setUpMediaRouteButton(requireContext(), castButton)
+        }
         search.setOnClickListener { activity.openSearch() }
         menu.setOnClickListener { it ->
             PopupMenu(activity, it).apply {

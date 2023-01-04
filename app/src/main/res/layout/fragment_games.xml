@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -18,11 +19,20 @@
 
             <ImageView
                 android:id="@+id/menu"
-                style="@style/MenuButton"/>
+                style="@style/ToolbarItem"
+                android:src="@drawable/baseline_more_vert_black_24" />
 
             <ImageView
                 android:id="@+id/search"
-                style="@style/Search"/>
+                style="@style/ToolbarItem"
+                android:src="@drawable/baseline_search_black_24" />
+
+            <androidx.mediarouter.app.MediaRouteButton
+                android:id="@+id/castButton"
+                style="@style/ToolbarItem"
+                android:visibility="gone"
+                app:actionProviderClass="androidx.mediarouter.app.MediaRouteActionProvider"
+                tools:visibility="visible" />
         </androidx.appcompat.widget.Toolbar>
 
         <include

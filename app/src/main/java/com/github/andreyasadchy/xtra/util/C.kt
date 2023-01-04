@@ -58,6 +58,7 @@ object C {
     const val UI_THEME_FOLLOW_SYSTEM = "ui_theme_follow_system"
     const val UI_THEME_DARK_ON = "ui_theme_dark_on"
     const val UI_THEME_DARK_OFF = "ui_theme_dark_off"
+    const val SHOW_CAST = "show_cast"
     const val PLAYER_DOUBLETAP = "player_doubletap"
     const val PLAYER_PAUSE = "player_pause"
     const val PLAYER_MINIMIZE = "player_minimize"

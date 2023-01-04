@@ -21,22 +21,26 @@ import com.github.andreyasadchy.xtra.util.C
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.Player.EVENT_PLAYBACK_STATE_CHANGED
 import com.google.android.exoplayer2.Player.EVENT_PLAY_WHEN_READY_CHANGED
+import com.google.android.exoplayer2.ext.cast.CastPlayer
+import com.google.android.exoplayer2.ext.cast.DefaultMediaItemConverter
+import com.google.android.exoplayer2.ext.cast.SessionAvailabilityListener
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.trackselection.TrackSelectionOverride
 import com.google.android.exoplayer2.upstream.HttpDataSource
+import com.google.android.gms.cast.framework.CastContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.concurrent.schedule
 
 
-abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(context), Player.Listener, OnQualityChangeListener {
+abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(context), Player.Listener, OnQualityChangeListener, SessionAvailabilityListener {
 
     protected val tag: String = javaClass.simpleName
 
-    var player: ExoPlayer? = null
+    var player: Player? = null
     protected var mediaSourceFactory: MediaSource.Factory? = null
     protected lateinit var mediaItem: MediaItem //TODO maybe redo these viewmodels to custom players
 
@@ -115,8 +119,20 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     protected fun initializePlayer() {
+        val context = getApplication<Application>()
+        val castPlayer = CastPlayer(CastContext.getSharedInstance(context), DefaultMediaItemConverter(),
+            context.prefs().getString(C.PLAYER_REWIND, "10000")?.toLongOrNull() ?: 10000,
+            context.prefs().getString(C.PLAYER_FORWARD, "10000")?.toLongOrNull() ?: 10000
+        ).apply {
+            setSessionAvailabilityListener(this@PlayerViewModel)
+            addListener(this@PlayerViewModel)
+            playWhenReady = true
+        }
+        if (castPlayer.isCastSessionAvailable) {
+            player = castPlayer
+            _playerUpdated.postValue(true)
+        }
         if (player == null) {
-            val context = getApplication<Application>()
             player = ExoPlayer.Builder(context).apply {
                 if (context.prefs().getBoolean(C.PLAYER_FORCE_FIRST_DECODER, false)) {
                     setRenderersFactory(DefaultRenderersFactory(context).setMediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
@@ -209,6 +225,16 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
         }
     }
 
+    override fun onCastSessionAvailable() {
+        releasePlayer()
+        initializePlayer()
+    }
+
+    override fun onCastSessionUnavailable() {
+        releasePlayer()
+        initializePlayer()
+    }
+
     //Player.Listener
 
     override fun onEvents(player: Player, events: Player.Events) {
@@ -227,7 +253,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player?.playerError
+        val playerError = (player as? ExoPlayer)?.playerError
         Log.e(tag, "Player error", playerError)
         playbackPosition = player?.currentPosition ?: 0
         val context = getApplication<Application>()

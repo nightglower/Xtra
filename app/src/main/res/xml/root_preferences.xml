@@ -142,6 +142,12 @@
         android:title="@string/compact_streams_title"
         app:iconSpaceReserved="false"/>
 
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="show_cast"
+        android:title="@string/show_cast_button"
+        app:iconSpaceReserved="false"/>
+
     <PreferenceCategory android:title="@string/settings_chat" app:iconSpaceReserved="false" />
     <SwitchPreferenceCompat
         android:defaultValue="false"

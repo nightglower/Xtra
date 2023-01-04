@@ -53,6 +53,7 @@ import com.github.andreyasadchy.xtra.ui.top.TopFragment
 import com.github.andreyasadchy.xtra.ui.videos.BaseVideosFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
+import com.google.android.gms.cast.framework.CastContext
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.ncapdevi.fragnav.FragNavController
 import dagger.hilt.android.AndroidEntryPoint
@@ -134,6 +135,13 @@ class MainActivity : AppCompatActivity(), GamesFragment.OnGameSelectedListener, 
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(langPref))
                 }
                 putBoolean(C.FIRST_LAUNCH3, false)
+            }
+        }
+        if (prefs.getBoolean(C.SHOW_CAST, true)) {
+            try {
+                CastContext.getSharedInstance(this)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
         applyTheme()

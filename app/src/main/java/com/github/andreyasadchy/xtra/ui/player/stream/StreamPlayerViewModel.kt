@@ -16,15 +16,15 @@ import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.HlsPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode.*
 import com.github.andreyasadchy.xtra.util.*
-import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.PlaybackException
+import com.github.andreyasadchy.xtra.util.C
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.upstream.HttpDataSource
+import com.google.android.exoplayer2.util.MimeTypes.APPLICATION_M3U8
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -211,6 +211,8 @@ class StreamPlayerViewModel @Inject constructor(
                             maxSpeed?.let { setMaxPlaybackSpeed(it) }
                             targetOffset?.let { setTargetOffsetMs(it) }
                         }.build())
+                        setMimeType(APPLICATION_M3U8)
+                        setMediaMetadata(MediaMetadata.Builder().setTitle("Title").build())
                     }.build()
                     initializePlayer()
                 }
@@ -222,7 +224,7 @@ class StreamPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player?.playerError
+        val playerError = (player as? ExoPlayer)?.playerError
         Log.e(tag, "Player error", playerError)
         val context = getApplication<Application>()
         if (context.isNetworkAvailable) {

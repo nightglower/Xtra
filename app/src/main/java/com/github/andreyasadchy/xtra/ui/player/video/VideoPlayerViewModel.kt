@@ -27,6 +27,7 @@ import com.github.andreyasadchy.xtra.ui.player.HlsPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.source.hls.HlsManifest
@@ -34,6 +35,7 @@ import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.HttpDataSource
+import com.google.android.exoplayer2.util.MimeTypes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -126,7 +128,10 @@ class VideoPlayerViewModel @Inject constructor(
                 }
                 mediaSourceFactory = HlsMediaSource.Factory(DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory()))
                     .setPlaylistParserFactory(DefaultHlsPlaylistParserFactory())
-                mediaItem = MediaItem.fromUri(url)
+                mediaItem = MediaItem.Builder().apply {
+                    setUri(url)
+                    setMimeType(MimeTypes.APPLICATION_M3U8)
+                }.build()
                 initializePlayer()
                 if (startOffset > 0) {
                     player?.seekTo(startOffset)
@@ -205,7 +210,7 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player?.playerError
+        val playerError = (player as? ExoPlayer)?.playerError
         if (playerError != null) {
             if (playerError.type == ExoPlaybackException.TYPE_SOURCE &&
                 playerError.sourceException.let { it is HttpDataSource.InvalidResponseCodeException }) {

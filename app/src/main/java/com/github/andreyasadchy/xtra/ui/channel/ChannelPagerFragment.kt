@@ -27,11 +27,19 @@ import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
 import com.github.andreyasadchy.xtra.util.*
+import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_channel.*
+import kotlinx.android.synthetic.main.fragment_channel.appBar
+import kotlinx.android.synthetic.main.fragment_channel.castButton
+import kotlinx.android.synthetic.main.fragment_channel.menu
+import kotlinx.android.synthetic.main.fragment_channel.pagerLayout
+import kotlinx.android.synthetic.main.fragment_channel.search
+import kotlinx.android.synthetic.main.fragment_channel.toolbar
 import kotlinx.android.synthetic.main.fragment_media_pager.view.*
+import kotlinx.android.synthetic.main.fragment_media_pager_toolbar.*
 
 
 @AndroidEntryPoint
@@ -85,6 +93,10 @@ class ChannelPagerFragment : MediaPagerFragment(), FollowFragment, Scrollable {
         toolbar.apply {
             navigationIcon = Utils.getNavigationIcon(activity)
             setNavigationOnClickListener { activity.popFragment() }
+        }
+        if (requireContext().prefs().getBoolean(C.SHOW_CAST, true)) {
+            castButton.visible()
+            CastButtonFactory.setUpMediaRouteButton(requireContext(), castButton)
         }
         search.setOnClickListener { activity.openSearch() }
         menu.setOnClickListener { it ->

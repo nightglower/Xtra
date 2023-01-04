@@ -21,6 +21,7 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -155,7 +156,7 @@ class ClipPlayerViewModel @Inject constructor(
     }
 
     override fun onPlayerError(error: PlaybackException) {
-        val playerError = player?.playerError
+        val playerError = (player as? ExoPlayer)?.playerError
         if (playerError?.type == ExoPlaybackException.TYPE_UNEXPECTED && playerError.unexpectedException is IllegalStateException) {
             val context = getApplication<Application>()
             context.shortToast(R.string.player_error)

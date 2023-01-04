@@ -14,7 +14,11 @@ import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.settings.SettingsActivity
+import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.nullIfEmpty
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.visible
+import com.google.android.gms.cast.framework.CastButtonFactory
 import kotlinx.android.synthetic.main.fragment_media_pager_toolbar.*
 
 abstract class MediaPagerToolbarFragment : MediaPagerFragment() {
@@ -27,6 +31,10 @@ abstract class MediaPagerToolbarFragment : MediaPagerFragment() {
         super.onViewCreated(view, savedInstanceState)
         val activity = requireActivity() as MainActivity
         val account = Account.get(activity)
+        if (requireContext().prefs().getBoolean(C.SHOW_CAST, true)) {
+            castButton.visible()
+            CastButtonFactory.setUpMediaRouteButton(requireContext(), castButton)
+        }
         search.setOnClickListener { activity.openSearch() }
         menu.setOnClickListener { it ->
             PopupMenu(activity, it).apply {
