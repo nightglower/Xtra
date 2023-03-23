@@ -47,14 +47,6 @@ class StreamPlayerViewModel @Inject constructor(
     private val _stream = MutableLiveData<Stream?>()
     val stream: MutableLiveData<Stream?>
         get() = _stream
-    override val userId: String?
-        get() { return _stream.value?.channelId }
-    override val userLogin: String?
-        get() { return _stream.value?.channelLogin }
-    override val userName: String?
-        get() { return _stream.value?.channelName }
-    override val channelLogo: String?
-        get() { return _stream.value?.channelLogo }
 
     private var useProxy: Int? = null
     private var playingAds = false

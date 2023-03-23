@@ -1,10 +1,11 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    id("kotlin-android-extensions")
+    id("org.jetbrains.kotlin.android")
     id("kotlin-kapt")
-    id("dagger.hilt.android.plugin")
-    id("com.apollographql.apollo3").version("$apollo_ver")
+    id("kotlin-parcelize")
+    id("com.google.dagger.hilt.android")
+    id("androidx.navigation.safeargs.kotlin") version "$navigation"
+    id("com.apollographql.apollo3") version "$apollo_ver"
 }
 
 android {
@@ -16,7 +17,9 @@ android {
             storePassword '123456'
         }
     }
+    namespace 'com.github.andreyasadchy.xtra'
     compileSdk 33
+
     defaultConfig {
         applicationId "com.github.andreyasadchy.xtra"
         minSdk 21
@@ -24,11 +27,6 @@ android {
         versionCode 121
         versionName "2.16.2"
         resConfigs 'ar', 'de', 'en', 'es', 'fr', 'in', 'ja', 'pt-rBR', 'ru', 'tr'
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
-            }
-        }
     }
 
     buildTypes {
@@ -51,10 +49,12 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    buildFeatures {
+        viewBinding true
+    }
     lint {
         disable 'ContentDescription'
     }
-    namespace 'com.github.andreyasadchy.xtra'
 }
 
 // Delete large build log files from ~/.gradle/daemon/X.X/daemon-XXX.out.log
@@ -72,7 +72,7 @@ dependencies {
 
     //UI
     implementation 'com.google.android.material:material:1.9.0-alpha02'
-    implementation 'androidx.appcompat:appcompat:1.7.0-alpha01'
+    implementation 'androidx.appcompat:appcompat:1.7.0-alpha02'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.preference:preference-ktx:1.2.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
@@ -90,6 +90,8 @@ dependencies {
     kapt "androidx.room:room-compiler:$room"
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.fragment:fragment-ktx:1.5.5'
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigation"
+    implementation "androidx.navigation:navigation-ui-ktx:$navigation"
     implementation 'androidx.webkit:webkit:1.6.0'
 
     //Misc
@@ -98,8 +100,6 @@ dependencies {
     implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.9'
 
     implementation "com.apollographql.apollo3:apollo-runtime:$apollo_ver"
-
-    implementation 'com.ncapdevi:frag-nav:3.3.0'
 
     implementation "androidx.tonyodev.fetch2:xfetch2:$fetch"
     implementation "androidx.tonyodev.fetch2okhttp:xfetch2okhttp:$fetch"
@@ -122,13 +122,20 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$dagger"
     kapt "com.google.dagger:hilt-compiler:$dagger"
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+}
+
+kapt {
+    arguments {
+        arg('room.schemaLocation', "$projectDir/schemas")
+    }
 }
 
 apollo {
     service("service") {
         packageName.set("com.github.andreyasadchy.xtra")
-        generateKotlinModels.set(true)
+        outputDirConnection {
+            connectToAndroidSourceSet("main")
+        }
     }
 }

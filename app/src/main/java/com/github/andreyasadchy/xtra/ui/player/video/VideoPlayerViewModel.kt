@@ -67,15 +67,6 @@ class VideoPlayerViewModel @Inject constructor(
             return VideoDownloadInfo(video, helper.urls, relativeTimes, durations, playlist.durationUs / 1000L, playlist.targetDurationUs / 1000L, player?.currentPosition ?: 0)
         }
 
-    override val userId: String?
-        get() { return video.channelId }
-    override val userLogin: String?
-        get() { return video.channelLogin }
-    override val userName: String?
-        get() { return video.channelName }
-    override val channelLogo: String?
-        get() { return video.channelLogo }
-
     val bookmarkItem = MutableLiveData<Bookmark>()
     val gamesList = MutableLiveData<List<Game>>()
     private var isLoading = false
@@ -91,7 +82,6 @@ class VideoPlayerViewModel @Inject constructor(
                         gamesList.postValue(get)
                     }
                 } catch (e: Exception) {
-                    _errors.postValue(e)
                 } finally {
                     isLoading = false
                 }

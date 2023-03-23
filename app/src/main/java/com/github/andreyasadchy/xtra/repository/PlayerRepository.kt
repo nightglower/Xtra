@@ -3,7 +3,7 @@ package com.github.andreyasadchy.xtra.repository
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.Transformations
+import androidx.lifecycle.map
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.api.MiscApi
 import com.github.andreyasadchy.xtra.api.TTVLolApi
@@ -173,7 +173,7 @@ class PlayerRepository @Inject constructor(
         }
     }
 
-    fun loadVideoPositions(): LiveData<Map<Long, Long>> = Transformations.map(videoPositions.getAll()) { list ->
+    fun loadVideoPositions(): LiveData<Map<Long, Long>> = videoPositions.getAll().map { list ->
         list.associate { it.id to it.position }
     }
 

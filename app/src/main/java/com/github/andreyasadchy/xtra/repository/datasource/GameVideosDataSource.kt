@@ -1,7 +1,8 @@
 package com.github.andreyasadchy.xtra.repository.datasource
 
 import androidx.core.util.Pair
-import androidx.paging.DataSource
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.github.andreyasadchy.xtra.GameVideosQuery
@@ -11,9 +12,8 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
-import kotlinx.coroutines.CoroutineScope
 
-class GameVideosDataSource private constructor(
+class GameVideosDataSource(
     private val gameId: String?,
     private val gameName: String?,
     private val helixClientId: String?,
@@ -31,15 +31,14 @@ class GameVideosDataSource private constructor(
     private val gqlSort: String?,
     private val gqlApi: GraphQLRepository,
     private val apolloClient: ApolloClient,
-    private val apiPref: ArrayList<Pair<Long?, String?>?>,
-    coroutineScope: CoroutineScope) : BasePositionalDataSource<Video>(coroutineScope) {
+    private val apiPref: ArrayList<Pair<Long?, String?>?>) : PagingSource<Int, Video>() {
     private var api: String? = null
     private var offset: String? = null
     private var nextPage: Boolean = true
 
-    override fun loadInitial(params: LoadInitialParams, callback: LoadInitialCallback<Video>) {
-        loadInitial(params, callback) {
-            try {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Video> {
+        return try {
+            val response = try {
                 when (apiPref.elementAt(0)?.second) {
                     C.HELIX -> if (!helixToken.isNullOrBlank()) { api = C.HELIX; helixLoad(params) } else throw Exception()
                     C.GQL_QUERY -> if (helixPeriod == VideoPeriodEnum.WEEK) { api = C.GQL_QUERY; gqlQueryLoad(params) } else throw Exception()
@@ -67,10 +66,17 @@ class GameVideosDataSource private constructor(
                     }
                 }
             }
+            LoadResult.Page(
+                data = response,
+                prevKey = null,
+                nextKey = if (!offset.isNullOrBlank() && (api == C.HELIX || nextPage)) (params.key ?: 1) + 1 else null
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
         }
     }
 
-    private suspend fun helixLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+    private suspend fun helixLoad(params: LoadParams<Int>): List<Video> {
         val get = helixApi.getVideos(
             clientId = helixClientId,
             token = helixToken,
@@ -79,7 +85,7 @@ class GameVideosDataSource private constructor(
             broadcastType = helixBroadcastTypes,
             language = helixLanguage,
             sort = helixSort,
-            limit = 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/,
+            limit = params.loadSize,
             offset = offset
         )
         val list = mutableListOf<Video>()
@@ -101,14 +107,14 @@ class GameVideosDataSource private constructor(
         return list
     }
 
-    private suspend fun gqlQueryLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
+    private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val get1 = apolloClient.newBuilder().apply { gqlClientId?.let { addHttpHeader("Client-ID", it) } }.build().query(GameVideosQuery(
             id = if (!gameId.isNullOrBlank()) Optional.Present(gameId) else Optional.Absent,
             name = if (gameId.isNullOrBlank() && !gameName.isNullOrBlank()) Optional.Present(gameName) else Optional.Absent,
             languages = Optional.Present(gqlQueryLanguages),
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),
-            first = Optional.Present(30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/),
+            first = Optional.Present(params.loadSize),
             after = Optional.Present(offset)
         )).execute().data?.game?.videos
         val get = get1?.edges
@@ -144,48 +150,17 @@ class GameVideosDataSource private constructor(
         return list
     }
 
-    private suspend fun gqlLoad(initialParams: LoadInitialParams? = null, rangeParams: LoadRangeParams? = null): List<Video> {
-        val get = gqlApi.loadGameVideos(gqlClientId, gameName, gqlType, gqlSort, 30 /*initialParams?.requestedLoadSize ?: rangeParams?.loadSize*/, offset)
+    private suspend fun gqlLoad(params: LoadParams<Int>): List<Video> {
+        val get = gqlApi.loadGameVideos(gqlClientId, gameName, gqlType, gqlSort, params.loadSize, offset)
         offset = get.cursor
         nextPage = get.hasNextPage ?: true
         return get.data
     }
 
-    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<Video>) {
-        loadRange(params, callback) {
-            if (!offset.isNullOrBlank()) {
-                when (api) {
-                    C.HELIX -> helixLoad(rangeParams = params)
-                    C.GQL_QUERY -> if (nextPage) gqlQueryLoad(rangeParams = params) else listOf()
-                    C.GQL -> if (nextPage) gqlLoad(rangeParams = params) else listOf()
-                    else -> listOf()
-                }
-            } else listOf()
+    override fun getRefreshKey(state: PagingState<Int, Video>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            val anchorPage = state.closestPageToPosition(anchorPosition)
+            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
-    }
-
-    class Factory (
-        private val gameId: String?,
-        private val gameName: String?,
-        private val helixClientId: String?,
-        private val helixToken: String?,
-        private val helixPeriod: VideoPeriodEnum,
-        private val helixBroadcastTypes: BroadcastTypeEnum,
-        private val helixLanguage: String?,
-        private val helixSort: VideoSortEnum,
-        private val helixApi: HelixApi,
-        private val gqlClientId: String?,
-        private val gqlQueryLanguages: List<String>?,
-        private val gqlQueryType: BroadcastType?,
-        private val gqlQuerySort: VideoSort?,
-        private val gqlType: String?,
-        private val gqlSort: String?,
-        private val gqlApi: GraphQLRepository,
-        private val apolloClient: ApolloClient,
-        private val apiPref: ArrayList<Pair<Long?, String?>?>,
-        private val coroutineScope: CoroutineScope) : BaseDataSourceFactory<Int, Video, GameVideosDataSource>() {
-
-        override fun create(): DataSource<Int, Video> =
-                GameVideosDataSource(gameId, gameName, helixClientId, helixToken, helixPeriod, helixBroadcastTypes, helixLanguage, helixSort, helixApi, gqlClientId, gqlQueryLanguages, gqlQueryType, gqlQuerySort, gqlType, gqlSort, gqlApi, apolloClient, apiPref, coroutineScope).also(sourceLiveData::postValue)
     }
 }

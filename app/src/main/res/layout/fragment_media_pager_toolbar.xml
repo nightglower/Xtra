@@ -26,7 +26,7 @@
                 style="@style/Search" />
 
             <ImageButton
-                android:id="@+id/followGame"
+                android:id="@+id/followButton"
                 style="@style/FollowButton"
                 android:visibility="gone"
                 tools:visibility="visible" />

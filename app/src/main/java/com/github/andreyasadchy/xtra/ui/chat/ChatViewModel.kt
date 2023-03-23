@@ -1,15 +1,11 @@
 package com.github.andreyasadchy.xtra.ui.chat
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.chat.*
 import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
-import com.github.andreyasadchy.xtra.ui.common.BaseViewModel
 import com.github.andreyasadchy.xtra.ui.player.ChatReplayManager
 import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import com.github.andreyasadchy.xtra.ui.view.chat.MAX_ADAPTER_COUNT
@@ -46,7 +42,7 @@ import kotlin.collections.sortedBy
 class ChatViewModel @Inject constructor(
     private val repository: ApiRepository,
     private val playerRepository: PlayerRepository,
-    private val okHttpClient: OkHttpClient) : BaseViewModel(), ChatView.MessageSenderCallback {
+    private val okHttpClient: OkHttpClient) : ViewModel(), ChatView.MessageSenderCallback {
 
     val recentEmotes: LiveData<List<Emote>> by lazy {
         MediatorLiveData<List<Emote>>().apply {

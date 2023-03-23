@@ -5,65 +5,66 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.PagingData
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.model.ui.Stream
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.Searchable
 import com.github.andreyasadchy.xtra.ui.streams.StreamsAdapter
 import com.github.andreyasadchy.xtra.ui.streams.StreamsCompactAdapter
 import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
 import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class StreamSearchFragment : PagedListFragment<Stream, StreamSearchViewModel, BasePagedListAdapter<Stream>>(), Searchable {
+class StreamSearchFragment : PagedListFragment(), Searchable {
 
-    override val viewModel: StreamSearchViewModel by viewModels()
+    private var _binding: CommonRecyclerViewLayoutBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: StreamSearchViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Stream, out RecyclerView.ViewHolder>
 
-    override val adapter: BasePagedListAdapter<Stream> by lazy {
-        val activity = requireActivity() as MainActivity
-        if (!compactStreams) {
-            StreamsAdapter(this, activity, activity, activity)
-        } else {
-            StreamsCompactAdapter(this, activity, activity, activity)
-        }
-    }
-
-    private var compactStreams = false
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        compactStreams = requireContext().prefs().getString(C.COMPACT_STREAMS, "disabled") == "all"
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.common_recycler_view_layout, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = CommonRecyclerViewLayoutBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        swipeRefresh.isEnabled = false
+        pagingAdapter = if (requireContext().prefs().getString(C.COMPACT_STREAMS, "disabled") == "all") {
+            StreamsCompactAdapter(this)
+        } else {
+            StreamsAdapter(this)
+        }
+        setAdapter(binding.recyclerView, pagingAdapter)
+    }
+
+    override fun initialize() {
+        initializeAdapter(binding, pagingAdapter, viewModel.flow, enableSwipeRefresh = false, enableScrollTopButton = false)
     }
 
     override fun search(query: String) {
         if (query.isNotEmpty()) { //TODO same query doesn't fire
-            viewModel.setQuery(
-                query = query,
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_SEARCH_STREAMS, ""), TwitchApiHelper.searchStreamsApiDefaults),
-                thumbnailsEnabled = !compactStreams
-            )
+            viewModel.setQuery(query)
         } else {
-            adapter.submitList(null)
-            nothingHere?.gone()
+            viewLifecycleOwner.lifecycleScope.launch {
+                pagingAdapter.submitData(PagingData.empty())
+                binding.nothingHere.gone()
+            }
         }
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

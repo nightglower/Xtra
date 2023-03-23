@@ -8,12 +8,12 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
-import com.github.andreyasadchy.xtra.ui.common.BaseAndroidViewModel
 import com.github.andreyasadchy.xtra.ui.common.OnQualityChangeListener
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerViewModel
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerViewModel
@@ -30,7 +30,7 @@ import java.util.*
 import kotlin.concurrent.schedule
 
 
-abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(context), Player.Listener, OnQualityChangeListener {
+abstract class PlayerViewModel(context: Application) : AndroidViewModel(context), Player.Listener, OnQualityChangeListener {
 
     protected val tag: String = javaClass.simpleName
     protected val prefs = context.prefs()
@@ -110,7 +110,7 @@ abstract class PlayerViewModel(context: Application) : BaseAndroidViewModel(cont
         player?.seekTo(playbackPosition)
     }
 
-    protected fun initializePlayer() {
+    fun initializePlayer() {
         if (player == null) {
             val context = getApplication<Application>()
             player = ExoPlayer.Builder(context).apply {

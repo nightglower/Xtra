@@ -2,6 +2,7 @@ package com.github.andreyasadchy.xtra.ui.common
 
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
@@ -22,12 +23,10 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import coil.imageLoader
 import coil.request.ImageRequest
-import com.bumptech.glide.integration.webp.decoder.WebpDrawable
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.model.chat.*
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
@@ -341,17 +340,11 @@ class ChatAdapter(
                 "0" -> loadCoil(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                 "1" -> {
                     when {
-                        it.type.equals("webp", true) -> loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
+                        it.type.equals("webp", true) -> loadGlide(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                         else -> loadCoil(holder, it, originalMessage, builder, userId, channelId, fullMsg)
                     }
                 }
-                else -> {
-                    when {
-                        it.type.equals("webp", true) -> loadWebp(holder, it, originalMessage, builder, userId, channelId, fullMsg)
-                        it.type.equals("gif", true) -> loadGif(holder, it, originalMessage, builder, userId, channelId, fullMsg)
-                        else -> loadDrawable(holder, it, originalMessage, builder, userId, channelId, fullMsg)
-                    }
-                }
+                else -> loadGlide(holder, it, originalMessage, builder, userId, channelId, fullMsg)
             }
         }
     }
@@ -366,27 +359,34 @@ class ChatAdapter(
             })
             .target(
                 onSuccess = { result ->
-                    val width: Int
-                    val height: Int
-                    if (image.isEmote) {
-                        val size = calculateEmoteSize(result)
-                        width = size.first
-                        height = size.second
+                    val size = if (image.isEmote) {
+                        calculateEmoteSize(result)
                     } else {
-                        width = badgeSize
-                        height = badgeSize
+                        Pair(badgeSize, badgeSize)
                     }
                     if (image.isZeroWidth && enableZeroWidth) {
-                        result.setBounds(-90, 0, width - 90, height)
+                        result.setBounds(-90, 0, size.first - 90, size.second)
                     } else {
-                        result.setBounds(0, 0, width, height)
+                        result.setBounds(0, 0, size.first, size.second)
+                    }
+                    if (result is Animatable && image.isAnimated != false && animateGifs) {
+                        result.callback = object : Drawable.Callback {
+                            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                holder.textView.removeCallbacks(what)
+                            }
+
+                            override fun invalidateDrawable(who: Drawable) {
+                                holder.textView.invalidate()
+                            }
+
+                            override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                holder.textView.postDelayed(what, `when`)
+                            }
+                        }
+                        (result as Animatable).start()
                     }
                     try {
                         builder.setSpan(ImageSpan(result), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
-                        if (image.isAnimated != false && animateGifs) {
-                            (result as? coil.drawable.ScaleDrawable)?.start() ?:
-                            (result as? coil.drawable.MovieDrawable)?.start()
-                        }
                     } catch (e: IndexOutOfBoundsException) {
                     }
                     holder.bind(originalMessage, builder, userId, channelId, fullMsg)
@@ -396,114 +396,8 @@ class ChatAdapter(
         fragment.requireContext().imageLoader.enqueue(request)
     }
 
-    private fun loadWebp(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
-        GlideApp.with(fragment)
-            .asWebp()
-            .load(when (emoteQuality) {
-                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
-                "3" -> image.url3x ?: image.url2x ?: image.url1x
-                "2" -> image.url2x ?: image.url1x
-                else -> image.url1x
-            })
-            .diskCacheStrategy(DiskCacheStrategy.DATA)
-            .into(object : CustomTarget<WebpDrawable>() {
-                override fun onResourceReady(resource: WebpDrawable, transition: Transition<in WebpDrawable>?) {
-                    resource.apply {
-                        val size = calculateEmoteSize(this)
-                        if (image.isZeroWidth && enableZeroWidth) {
-                            setBounds(-90, 0, size.first - 90, size.second)
-                        } else {
-                            setBounds(0, 0, size.first, size.second)
-                        }
-                        loopCount = WebpDrawable.LOOP_FOREVER
-                        callback = object : Drawable.Callback {
-                            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
-                                holder.textView.removeCallbacks(what)
-                            }
-
-                            override fun invalidateDrawable(who: Drawable) {
-                                holder.textView.invalidate()
-                            }
-
-                            override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
-                                holder.textView.postDelayed(what, `when`)
-                            }
-                        }
-                        if (image.isAnimated != false && animateGifs) {
-                            start()
-                        }
-                    }
-                    try {
-                        builder.setSpan(ImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    } catch (e: IndexOutOfBoundsException) {
-                    }
-                    holder.bind(originalMessage, builder, userId, channelId, fullMsg)
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) {
-                }
-
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    loadDrawable(holder, image, originalMessage, builder, userId, channelId, fullMsg)
-                }
-            })
-    }
-
-    private fun loadGif(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
-        GlideApp.with(fragment)
-            .asGif()
-            .load(when (emoteQuality) {
-                "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
-                "3" -> image.url3x ?: image.url2x ?: image.url1x
-                "2" -> image.url2x ?: image.url1x
-                else -> image.url1x
-            })
-            .diskCacheStrategy(DiskCacheStrategy.DATA)
-            .into(object : CustomTarget<GifDrawable>() {
-                override fun onResourceReady(resource: GifDrawable, transition: Transition<in GifDrawable>?) {
-                    resource.apply {
-                        val size = calculateEmoteSize(this)
-                        if (image.isZeroWidth && enableZeroWidth) {
-                            setBounds(-90, 0, size.first - 90, size.second)
-                        } else {
-                            setBounds(0, 0, size.first, size.second)
-                        }
-                        setLoopCount(GifDrawable.LOOP_FOREVER)
-                        callback = object : Drawable.Callback {
-                            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
-                                holder.textView.removeCallbacks(what)
-                            }
-
-                            override fun invalidateDrawable(who: Drawable) {
-                                holder.textView.invalidate()
-                            }
-
-                            override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
-                                holder.textView.postDelayed(what, `when`)
-                            }
-                        }
-                        if (image.isAnimated != false && animateGifs) {
-                            start()
-                        }
-                    }
-                    try {
-                        builder.setSpan(ImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
-                    } catch (e: IndexOutOfBoundsException) {
-                    }
-                    holder.bind(originalMessage, builder, userId, channelId, fullMsg)
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) {
-                }
-
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    loadDrawable(holder, image, originalMessage, builder, userId, channelId, fullMsg)
-                }
-            })
-    }
-
-    private fun loadDrawable(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
-        GlideApp.with(fragment)
+    private fun loadGlide(holder: ViewHolder, image: Image, originalMessage: CharSequence, builder: SpannableStringBuilder, userId: String?, channelId: String?, fullMsg: String?) {
+        Glide.with(fragment)
             .load(when (emoteQuality) {
                 "4" -> image.url4x ?: image.url3x ?: image.url2x ?: image.url1x
                 "3" -> image.url3x ?: image.url2x ?: image.url1x
@@ -513,20 +407,31 @@ class ChatAdapter(
             .diskCacheStrategy(DiskCacheStrategy.DATA)
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    val width: Int
-                    val height: Int
-                    if (image.isEmote) {
-                        val size = calculateEmoteSize(resource)
-                        width = size.first
-                        height = size.second
+                    val size = if (image.isEmote) {
+                        calculateEmoteSize(resource)
                     } else {
-                        width = badgeSize
-                        height = badgeSize
+                        Pair(badgeSize, badgeSize)
                     }
                     if (image.isZeroWidth && enableZeroWidth) {
-                        resource.setBounds(-90, 0, width - 90, height)
+                        resource.setBounds(-90, 0, size.first - 90, size.second)
                     } else {
-                        resource.setBounds(0, 0, width, height)
+                        resource.setBounds(0, 0, size.first, size.second)
+                    }
+                    if (resource is Animatable && image.isAnimated != false && animateGifs) {
+                        resource.callback = object : Drawable.Callback {
+                            override fun unscheduleDrawable(who: Drawable, what: Runnable) {
+                                holder.textView.removeCallbacks(what)
+                            }
+
+                            override fun invalidateDrawable(who: Drawable) {
+                                holder.textView.invalidate()
+                            }
+
+                            override fun scheduleDrawable(who: Drawable, what: Runnable, `when`: Long) {
+                                holder.textView.postDelayed(what, `when`)
+                            }
+                        }
+                        (resource as Animatable).start()
                     }
                     try {
                         builder.setSpan(ImageSpan(resource), image.start, image.end, SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -572,10 +477,7 @@ class ChatAdapter(
         super.onViewAttachedToWindow(holder)
         if (animateGifs) {
             (holder.textView.text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                (it.drawable as? coil.drawable.ScaleDrawable)?.start() ?:
-                (it.drawable as? coil.drawable.MovieDrawable)?.start() ?:
-                (it.drawable as? GifDrawable)?.start() ?:
-                (it.drawable as? WebpDrawable)?.start()
+                (it.drawable as? Animatable)?.start()
             }
         }
     }
@@ -584,10 +486,7 @@ class ChatAdapter(
         super.onViewDetachedFromWindow(holder)
         if (animateGifs) {
             (holder.textView.text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                (it.drawable as? coil.drawable.ScaleDrawable)?.stop() ?:
-                (it.drawable as? coil.drawable.MovieDrawable)?.stop() ?:
-                (it.drawable as? GifDrawable)?.stop() ?:
-                (it.drawable as? WebpDrawable)?.stop()
+                (it.drawable as? Animatable)?.stop()
             }
         }
     }
@@ -597,10 +496,7 @@ class ChatAdapter(
         if (animateGifs) {
             for (i in 0 until childCount) {
                 ((recyclerView.getChildAt(i) as TextView).text as? Spannable)?.getSpans<ImageSpan>()?.forEach {
-                    (it.drawable as? coil.drawable.ScaleDrawable)?.stop() ?:
-                    (it.drawable as? coil.drawable.MovieDrawable)?.stop() ?:
-                    (it.drawable as? GifDrawable)?.stop() ?:
-                    (it.drawable as? WebpDrawable)?.stop()
+                    (it.drawable as? Animatable)?.stop()
                 }
             }
         }

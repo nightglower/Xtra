@@ -5,48 +5,59 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
-import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.model.Account
+import androidx.lifecycle.lifecycleScope
+import androidx.paging.PagingData
+import androidx.paging.PagingDataAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.github.andreyasadchy.xtra.databinding.CommonRecyclerViewLayoutBinding
 import com.github.andreyasadchy.xtra.model.ui.Game
-import com.github.andreyasadchy.xtra.ui.common.BasePagedListAdapter
 import com.github.andreyasadchy.xtra.ui.common.PagedListFragment
 import com.github.andreyasadchy.xtra.ui.games.GamesAdapter
-import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.search.Searchable
-import com.github.andreyasadchy.xtra.util.C
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.gone
-import com.github.andreyasadchy.xtra.util.prefs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.common_recycler_view_layout.*
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class GameSearchFragment : PagedListFragment<Game, GameSearchViewModel, BasePagedListAdapter<Game>>(), Searchable {
+class GameSearchFragment : PagedListFragment(), Searchable {
 
-    override val viewModel: GameSearchViewModel by viewModels()
-    override val adapter: BasePagedListAdapter<Game> by lazy { GamesAdapter(this, requireActivity() as MainActivity, requireActivity() as MainActivity) }
+    private var _binding: CommonRecyclerViewLayoutBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: GameSearchViewModel by viewModels()
+    private lateinit var pagingAdapter: PagingDataAdapter<Game, out RecyclerView.ViewHolder>
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.common_recycler_view_layout, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = CommonRecyclerViewLayoutBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        swipeRefresh.isEnabled = false
+        pagingAdapter = GamesAdapter(this)
+        setAdapter(binding.recyclerView, pagingAdapter)
+    }
+
+    override fun initialize() {
+        initializeAdapter(binding, pagingAdapter, viewModel.flow, enableSwipeRefresh = false, enableScrollTopButton = false)
     }
 
     override fun search(query: String) {
         if (query.isNotEmpty()) {
-            viewModel.setQuery(
-                query = query,
-                helixClientId = requireContext().prefs().getString(C.HELIX_CLIENT_ID, "ilfexgv3nnljz3isbm257gzwrzr7bi"),
-                helixToken = Account.get(requireContext()).helixToken,
-                gqlClientId = requireContext().prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),
-                apiPref = TwitchApiHelper.listFromPrefs(requireContext().prefs().getString(C.API_PREF_SEARCH_GAMES, ""), TwitchApiHelper.searchGamesApiDefaults)
-            )
+            viewModel.setQuery(query)
         } else {
-            adapter.submitList(null)
-            nothingHere?.gone()
+            viewLifecycleOwner.lifecycleScope.launch {
+                pagingAdapter.submitData(PagingData.empty())
+                binding.nothingHere.gone()
+            }
         }
+    }
+
+    override fun onNetworkRestored() {
+        pagingAdapter.retry()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

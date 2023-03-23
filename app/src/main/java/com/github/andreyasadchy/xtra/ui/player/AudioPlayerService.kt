@@ -13,10 +13,10 @@ import android.os.IBinder
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.github.andreyasadchy.xtra.GlideApp
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.VideoPosition
@@ -273,7 +273,7 @@ class AudioPlayerService : Service() {
         override fun getCurrentLargeIcon(player: Player, callback: PlayerNotificationManager.BitmapCallback): Bitmap? {
             if (largeIcon == null) {
                 try {
-                    GlideApp.with(this@AudioPlayerService)
+                    Glide.with(this@AudioPlayerService)
                             .asBitmap()
                             .load(imageUrl)
                             .diskCacheStrategy(DiskCacheStrategy.NONE)
