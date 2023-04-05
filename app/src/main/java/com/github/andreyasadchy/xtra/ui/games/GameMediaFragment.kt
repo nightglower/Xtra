@@ -1,5 +1,6 @@
 package com.github.andreyasadchy.xtra.ui.games
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -19,7 +20,7 @@ import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.NotLoggedIn
 import com.github.andreyasadchy.xtra.ui.Utils
 import com.github.andreyasadchy.xtra.ui.clips.common.ClipsFragment
-import com.github.andreyasadchy.xtra.ui.common.MediaFragment
+import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
@@ -31,12 +32,22 @@ import com.github.andreyasadchy.xtra.util.*
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class GameMediaFragment : MediaFragment(), Scrollable {
+class GameMediaFragment : BaseNetworkFragment(), Scrollable {
 
     private var _binding: FragmentMediaBinding? = null
     private val binding get() = _binding!!
     private val args: GamePagerFragmentArgs by navArgs()
     private val viewModel: GamePagerViewModel by viewModels()
+
+    private var previousItem = -1
+    private var currentFragment: Fragment? = null
+    private var firstLaunch = true
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        previousItem = savedInstanceState?.getInt("previousItem", -1) ?: -1
+        firstLaunch = savedInstanceState == null
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMediaBinding.inflate(inflater, container, false)
@@ -137,6 +148,9 @@ class GameMediaFragment : MediaFragment(), Scrollable {
                 }
             }
         }
+    }
+
+    override fun initialize() {
         if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
             viewModel.isFollowingGame(requireContext(), args.gameId, args.gameName)
         }
@@ -145,7 +159,7 @@ class GameMediaFragment : MediaFragment(), Scrollable {
         }
     }
 
-    override fun onSpinnerItemSelected(position: Int): Fragment {
+    private fun onSpinnerItemSelected(position: Int): Fragment {
         val fragment: Fragment = when (position) {
             0 -> StreamsFragment()
             1 -> GameVideosFragment()
@@ -154,9 +168,25 @@ class GameMediaFragment : MediaFragment(), Scrollable {
         return fragment.also { it.arguments = requireArguments() }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("previousItem", previousItem)
+        super.onSaveInstanceState(outState)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 3 && resultCode == Activity.RESULT_OK) {
+            requireActivity().recreate()
+        }
+    }
+
     override fun scrollToTop() {
         binding.appBar.setExpanded(true, true)
         (currentFragment as? Scrollable)?.scrollToTop()
+    }
+
+    override fun onNetworkRestored() {
     }
 
     override fun onDestroyView() {

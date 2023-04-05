@@ -102,8 +102,7 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 setOnClickListener { showDownloadDialog() }
             }
         }
-        if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false) && !video.id.isNullOrBlank()) {
-            viewModel.loadGamesList(prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), video.id)
+        if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {
             viewModel.gamesList.observe(viewLifecycleOwner) { list ->
                 if (list.isNotEmpty()) {
                     if (prefs.getBoolean(C.PLAYER_GAMESBUTTON, true)) {
@@ -183,6 +182,9 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
         viewModel.setVideo(video, requireArguments().getDouble(KEY_OFFSET))
         if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
             viewModel.isFollowingChannel(requireContext(), video.channelId, video.channelLogin)
+        }
+        if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {
+            viewModel.loadGamesList(prefs.getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"), video.id)
         }
     }
 

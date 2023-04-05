@@ -53,32 +53,38 @@ class TagSearchAdapter(
                     }
                     if (item.scope == "CATEGORY") {
                         if (item.id != null) {
-                            fragment.findNavController().navigate(GamesFragmentDirections.actionGlobalGamesFragment(
-                                tags = arrayOf(item.id)
-                            ))
+                            root.setOnClickListener {
+                                fragment.findNavController().navigate(GamesFragmentDirections.actionGlobalGamesFragment(
+                                    tags = arrayOf(item.id)
+                                ))
+                            }
                         }
                     } else {
                         if (item.name != null) {
                             if (args.gameId != null && args.gameName != null) {
-                                fragment.findNavController().navigate(
-                                    if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
-                                        GamePagerFragmentDirections.actionGlobalGamePagerFragment(
-                                            gameId = args.gameId,
-                                            gameName = args.gameName,
-                                            tags = arrayOf(item.name),
-                                        )
-                                    } else {
-                                        GameMediaFragmentDirections.actionGlobalGameMediaFragment(
-                                            gameId = args.gameId,
-                                            gameName = args.gameName,
-                                            tags = arrayOf(item.name),
-                                        )
-                                    }
-                                )
+                                root.setOnClickListener {
+                                    fragment.findNavController().navigate(
+                                        if (context.prefs().getBoolean(C.UI_GAMEPAGER, true)) {
+                                            GamePagerFragmentDirections.actionGlobalGamePagerFragment(
+                                                gameId = args.gameId,
+                                                gameName = args.gameName,
+                                                tags = arrayOf(item.name),
+                                            )
+                                        } else {
+                                            GameMediaFragmentDirections.actionGlobalGameMediaFragment(
+                                                gameId = args.gameId,
+                                                gameName = args.gameName,
+                                                tags = arrayOf(item.name),
+                                            )
+                                        }
+                                    )
+                                }
                             } else {
-                                fragment.findNavController().navigate(TopFragmentDirections.actionGlobalTopFragment(
-                                    tags = arrayOf(item.name)
-                                ))
+                                root.setOnClickListener {
+                                    fragment.findNavController().navigate(TopFragmentDirections.actionGlobalTopFragment(
+                                        tags = arrayOf(item.name)
+                                    ))
+                                }
                             }
                         }
                     }

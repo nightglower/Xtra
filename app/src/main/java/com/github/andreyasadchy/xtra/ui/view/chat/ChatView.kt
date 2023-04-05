@@ -11,6 +11,7 @@ import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.MultiAutoCompleteTextView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -69,6 +70,12 @@ class ChatView : ConstraintLayout {
     private var raidCallback: RaidCallback? = null
 
     private val rewardList = mutableListOf<Pair<LiveChatMessage?, PubSubPointReward?>>()
+
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            toggleEmoteMenu(false)
+        }
+    }
 
     constructor(context: Context) : super(context) {
         init(context)
@@ -378,14 +385,22 @@ class ChatView : ConstraintLayout {
         raidCallback = callbackRaid
     }
 
-    fun hideEmotesMenu(): Boolean {
-        with(binding) {
-            return if (emoteMenu.isVisible) {
-                emoteMenu.gone()
-                true
-            } else {
-                false
-            }
+    fun emoteMenuIsVisible(): Boolean = binding.emoteMenu.isVisible
+
+    fun toggleEmoteMenu(enable: Boolean) {
+        if (enable) {
+            binding.emoteMenu.visible()
+        } else {
+            binding.emoteMenu.gone()
+        }
+        toggleBackPressedCallback(enable)
+    }
+
+    fun toggleBackPressedCallback(enable: Boolean) {
+        if (enable) {
+            fragment.requireActivity().onBackPressedDispatcher.addCallback(fragment, backPressedCallback)
+        } else {
+            backPressedCallback.remove()
         }
     }
 
@@ -442,7 +457,11 @@ class ChatView : ConstraintLayout {
                     true
                 }
                 send.setOnClickListener { sendMessage() }
-                messageView.visible()
+                if (parent != null && parent.parent is SlidingLayout && !context.prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
+                    messageView.gone()
+                } else {
+                    messageView.visible()
+                }
                 viewPager.adapter = object : FragmentStateAdapter(fragment) {
                     override fun getItemCount(): Int = 3
 
@@ -461,23 +480,16 @@ class ChatView : ConstraintLayout {
                 }.attach()
                 emotes.setOnClickListener {
                     //TODO add animation
-                    with(emoteMenu) {
-                        if (isGone) {
-                            with(viewPager) {
-                                if (hasRecentEmotes != true && currentItem == 0) {
-                                    setCurrentItem(1, false)
-                                }
-                            }
-                            visible()
-                        } else {
-                            gone()
+                    if (emoteMenu.isGone) {
+                        if (hasRecentEmotes != true && viewPager.currentItem == 0) {
+                            viewPager.setCurrentItem(1, false)
                         }
+                        toggleEmoteMenu(true)
+                    } else {
+                        toggleEmoteMenu(false)
                     }
                 }
                 messagingEnabled = true
-                if (parent.parent is SlidingLayout && !context.prefs().getBoolean(C.KEY_CHAT_BAR_VISIBLE, true)) {
-                    messageView.gone()
-                }
             }
         }
     }
@@ -491,7 +503,7 @@ class ChatView : ConstraintLayout {
         with(binding) {
             editText.hideKeyboard()
             editText.clearFocus()
-            hideEmotesMenu()
+            toggleEmoteMenu(false)
             return messageCallback?.let {
                 val text = editText.text.trim()
                 editText.text.clear()

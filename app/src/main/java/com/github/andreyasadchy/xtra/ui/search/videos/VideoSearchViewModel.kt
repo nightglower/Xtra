@@ -28,7 +28,7 @@ class VideoSearchViewModel @Inject constructor(
     private val graphQLRepository: GraphQLRepository,
     private val apolloClient: ApolloClient) : BaseVideosViewModel(playerRepository, bookmarksRepository, repository) {
 
-    private val query = MutableStateFlow("")
+    val query = MutableStateFlow("")
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->

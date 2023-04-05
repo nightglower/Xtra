@@ -31,22 +31,17 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
+import com.github.andreyasadchy.xtra.ui.common.Scrollable
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
-import com.github.andreyasadchy.xtra.ui.follow.FollowMediaFragment
-import com.github.andreyasadchy.xtra.ui.follow.FollowPagerFragment
 import com.github.andreyasadchy.xtra.ui.games.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragment
 import com.github.andreyasadchy.xtra.ui.games.GamePagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.games.GamesFragment
 import com.github.andreyasadchy.xtra.ui.player.AudioPlayerService
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.clip.ClipPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.offline.OfflinePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.stream.StreamPlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.video.VideoPlayerFragment
-import com.github.andreyasadchy.xtra.ui.saved.SavedMediaFragment
-import com.github.andreyasadchy.xtra.ui.saved.SavedPagerFragment
-import com.github.andreyasadchy.xtra.ui.top.TopFragment
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -406,8 +401,8 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
             }
         }, null)
         binding.navBar.apply {
-            menu.add(Menu.NONE, R.id.gamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
-            menu.add(Menu.NONE, R.id.topFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)
+            menu.add(Menu.NONE, R.id.rootGamesFragment, Menu.NONE, R.string.games).setIcon(R.drawable.ic_games_black_24dp)
+            menu.add(Menu.NONE, R.id.rootTopFragment, Menu.NONE, R.string.popular).setIcon(R.drawable.ic_trending_up_black_24dp)
             if (prefs.getBoolean(C.UI_FOLLOWPAGER, true)) {
                 menu.add(Menu.NONE, R.id.followPagerFragment, Menu.NONE, R.string.following).setIcon(R.drawable.ic_favorite_black_24dp)
             } else {
@@ -424,15 +419,11 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                 return@setOnItemSelectedListener true
             }
             setOnItemReselectedListener {
-                val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
-                when {
-                    it.itemId == R.id.gamesFragment && currentFragment is GamesFragment && currentFragment.arguments?.getStringArray(C.TAGS).isNullOrEmpty() -> currentFragment.scrollToTop()
-                    it.itemId == R.id.topFragment && currentFragment is TopFragment && currentFragment.arguments?.getStringArray(C.TAGS).isNullOrEmpty() -> currentFragment.scrollToTop()
-                    it.itemId == R.id.followPagerFragment && currentFragment is FollowPagerFragment -> currentFragment.scrollToTop()
-                    it.itemId == R.id.followMediaFragment && currentFragment is FollowMediaFragment -> currentFragment.scrollToTop()
-                    it.itemId == R.id.savedPagerFragment && currentFragment is SavedPagerFragment -> currentFragment.scrollToTop()
-                    it.itemId == R.id.savedMediaFragment && currentFragment is SavedMediaFragment -> currentFragment.scrollToTop()
-                    else -> navController.popBackStack(it.itemId, false)
+                if (!navController.popBackStack(it.itemId, false)) {
+                    val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
+                    if (currentFragment is Scrollable) {
+                        currentFragment.scrollToTop()
+                    }
                 }
             }
         }

@@ -15,7 +15,6 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.addCallback
 import androidx.core.content.edit
 import androidx.core.view.*
 import androidx.lifecycle.lifecycleScope
@@ -72,22 +71,18 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
 
     private var chatWidthLandscape = 0
 
-    private lateinit var backPressedCallback: OnBackPressedCallback
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            minimize()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val activity = requireActivity()
         prefs = activity.prefs()
         isPortrait = activity.isInPortraitOrientation
-        backPressedCallback = activity.onBackPressedDispatcher.addCallback(this) {
-            if (this@BasePlayerFragment is StreamPlayerFragment) {
-                if (!hideEmotesMenu()) {
-                    minimize()
-                }
-            } else {
-                minimize()
-            }
-        }
+        activity.onBackPressedDispatcher.addCallback(this, backPressedCallback)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -100,7 +95,7 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
         slidingLayout.addListener(this)
         slidingLayout.maximizedSecondViewVisibility = if (prefs.getBoolean(C.KEY_CHAT_OPENED, true)) View.VISIBLE else View.GONE //TODO
         playerView = view.findViewById(R.id.playerView)
-        chatLayout = view.findViewById(R.id.chatFragmentContainer)
+        chatLayout = if (this is ClipPlayerFragment) view.findViewById(R.id.clipChatContainer) else view.findViewById(R.id.chatFragmentContainer)
         aspectRatioFrameLayout = view.findViewById(R.id.aspectRatioFrameLayout)
         aspectRatioFrameLayout.setAspectRatio(16f / 9f)
         chatWidthLandscape = prefs.getInt(C.LANDSCAPE_CHAT_WIDTH, 0)
@@ -259,7 +254,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     override fun onMinimize() {
-        backPressedCallback.isEnabled = false
+        if (this@BasePlayerFragment is StreamPlayerFragment && emoteMenuIsVisible()) {
+            toggleBackPressedCallback(false)
+        }
+        backPressedCallback.remove()
         playerView.useController = false
         if (!isPortrait) {
             showStatusBar()
@@ -272,7 +270,10 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
     }
 
     override fun onMaximize() {
-        backPressedCallback.isEnabled = true
+        requireActivity().onBackPressedDispatcher.addCallback(this, backPressedCallback)
+        if (this@BasePlayerFragment is StreamPlayerFragment && emoteMenuIsVisible()) {
+            toggleBackPressedCallback(true)
+        }
         playerView.useController = true
         if (!playerView.controllerHideOnTouch) { //TODO
             playerView.showController()
@@ -466,7 +467,9 @@ abstract class BasePlayerFragment : BaseNetworkFragment(), LifecycleListener, Sl
             if (it.isVisible) {
                 chatLayout.hideKeyboard()
                 chatLayout.clearFocus()
-                requireView().findViewById<LinearLayout>(R.id.emoteMenu)?.gone()
+                if (this@BasePlayerFragment is StreamPlayerFragment && emoteMenuIsVisible()) {
+                    toggleEmoteMenu(false)
+                }
                 it.gone()
                 prefs.edit { putBoolean(C.KEY_CHAT_BAR_VISIBLE, false) }
             } else {

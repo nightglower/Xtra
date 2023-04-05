@@ -241,7 +241,11 @@ class StreamPlayerFragment : BasePlayerFragment() {
         }
     }
 
-    fun hideEmotesMenu() = chatFragment.hideEmotesMenu()
+    fun emoteMenuIsVisible() = chatFragment.emoteMenuIsVisible()
+
+    fun toggleEmoteMenu(enable: Boolean) = chatFragment.toggleEmoteMenu(enable)
+
+    fun toggleBackPressedCallback(enable: Boolean) = chatFragment.toggleBackPressedCallback(enable)
 
     override fun onMinimize() {
         super.onMinimize()

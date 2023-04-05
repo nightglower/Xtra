@@ -27,7 +27,7 @@ class GameSearchViewModel @Inject constructor(
     private val helix: HelixApi,
     private val apolloClient: ApolloClient) : ViewModel() {
 
-    private val query = MutableStateFlow("")
+    val query = MutableStateFlow("")
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->

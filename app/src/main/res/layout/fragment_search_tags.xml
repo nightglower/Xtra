@@ -32,6 +32,8 @@
 
     <include
         android:id="@+id/recyclerViewLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         layout="@layout/common_recycler_view_layout"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 

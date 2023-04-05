@@ -69,21 +69,15 @@ class VideoPlayerViewModel @Inject constructor(
 
     val bookmarkItem = MutableLiveData<Bookmark>()
     val gamesList = MutableLiveData<List<Game>>()
-    private var isLoading = false
     private var shouldRetry = true
 
     fun loadGamesList(clientId: String?, videoId: String?) {
-        if (gamesList.value == null && !isLoading) {
-            isLoading = true
+        if (!gamesList.isInitialized) {
             viewModelScope.launch {
                 try {
                     val get = repository.loadVideoGames(clientId, videoId)
-                    if (get.isNotEmpty()) {
-                        gamesList.postValue(get)
-                    }
+                    gamesList.postValue(get)
                 } catch (e: Exception) {
-                } finally {
-                    isLoading = false
                 }
             }
         }
@@ -252,9 +246,11 @@ class VideoPlayerViewModel @Inject constructor(
     }
 
     fun checkBookmark() {
-        video.id?.let {
-            viewModelScope.launch {
-                bookmarkItem.postValue(bookmarksRepository.getBookmarkByVideoId(it))
+        if (this::video.isInitialized) {
+            video.id?.let {
+                viewModelScope.launch {
+                    bookmarkItem.postValue(bookmarksRepository.getBookmarkByVideoId(it))
+                }
             }
         }
     }

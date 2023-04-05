@@ -2,8 +2,28 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/topFragment">
+    app:startDestination="@id/rootTopFragment">
 
+    <fragment
+        android:id="@+id/rootGamesFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.games.GamesFragment"
+        android:label="GamesFragment" >
+        <argument
+            android:name="tags"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+    <fragment
+        android:id="@+id/rootTopFragment"
+        android:name="com.github.andreyasadchy.xtra.ui.top.TopFragment"
+        android:label="TopFragment" >
+        <argument
+            android:name="tags"
+            app:argType="string[]"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
     <fragment
         android:id="@+id/gamesFragment"
         android:name="com.github.andreyasadchy.xtra.ui.games.GamesFragment"

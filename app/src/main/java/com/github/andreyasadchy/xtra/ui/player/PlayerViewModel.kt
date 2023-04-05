@@ -230,19 +230,16 @@ abstract class PlayerViewModel(context: Application) : AndroidViewModel(context)
                 }
                 else -> {
                     defaultQuality?.split("p")?.let { default ->
-                        default[0].toIntOrNull()?.let { res ->
-                            val fps = if (default.size >= 2) default[1].toIntOrNull() ?: 0 else 0
-                            val map = mutableMapOf<Int, Int>()
-                            qualities.forEach { quality ->
-                                quality.split("p").let {
-                                    it[0].toIntOrNull()?.let { res ->
-                                        map[res] = if (it.size >= 2) it[1].toIntOrNull() ?: 0 else 0
-                                    }
+                        default[0].filter(Char::isDigit).toIntOrNull()?.let { defaultRes ->
+                            val defaultFps = if (default.size >= 2) default[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
+                            qualities.indexOf(qualities.find { qualityString ->
+                                qualityString.split("p").let { quality ->
+                                    quality[0].filter(Char::isDigit).toIntOrNull()?.let { qualityRes ->
+                                        val qualityFps = if (quality.size >= 2) quality[1].filter(Char::isDigit).toIntOrNull() ?: 0 else 0
+                                        (defaultRes == qualityRes && defaultFps >= qualityFps) || defaultRes > qualityRes
+                                    } ?: false
                                 }
-                            }
-                            map.filter { (res == it.key && fps >= it.value) || res > it.key }.entries.firstOrNull()?.let { entry ->
-                                qualities.indexOf("${entry.key}p" + if (entry.value != 0) "${entry.value}" else "").let { if (it != -1) it else null }
-                            }
+                            }).let { if (it != -1) it else null }
                         }
                     }
                 }

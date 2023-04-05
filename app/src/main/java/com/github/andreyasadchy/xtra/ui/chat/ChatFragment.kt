@@ -197,7 +197,11 @@ class ChatFragment : BaseNetworkFragment(), LifecycleListener, MessageClickedDia
         binding.chatView.clearFocus()
     }
 
-    fun hideEmotesMenu() = binding.chatView.hideEmotesMenu()
+    fun emoteMenuIsVisible() = binding.chatView.emoteMenuIsVisible()
+
+    fun toggleEmoteMenu(enable: Boolean) = binding.chatView.toggleEmoteMenu(enable)
+
+    fun toggleBackPressedCallback(enable: Boolean) = binding.chatView.toggleBackPressedCallback(enable)
 
     fun appendEmote(emote: Emote) {
         binding.chatView.appendEmote(emote)

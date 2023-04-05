@@ -23,7 +23,7 @@ class TagSearchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle) : ViewModel() {
 
     private val args = TagSearchFragmentArgs.fromSavedStateHandle(savedStateHandle)
-    private val query = MutableStateFlow("")
+    val query = MutableStateFlow("")
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->

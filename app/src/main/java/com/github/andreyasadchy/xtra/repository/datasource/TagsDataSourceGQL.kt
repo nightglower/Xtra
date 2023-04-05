@@ -8,12 +8,12 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 class TagsDataSourceGQL(
     private val clientId: String?,
     private val getGameTags: Boolean,
-    private val query: String?,
+    private val query: String,
     private val api: GraphQLRepository) : PagingSource<Int, Tag>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Tag> {
         return try {
-            val response = if (query.isNullOrBlank()) listOf() else if (getGameTags) {
+            val response = if (query.isBlank()) listOf() else if (getGameTags) {
                 api.loadGameTags(clientId, query).data
             } else {
                 api.loadFreeformTags(clientId, query).data

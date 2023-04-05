@@ -58,7 +58,9 @@ abstract class PagedListFragment : BaseNetworkFragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 pagingAdapter.loadStateFlow.collectLatest { loadState ->
                     progressBar.isVisible = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount == 0
-                    swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount != 0
+                    if (enableSwipeRefresh) {
+                        swipeRefresh.isRefreshing = loadState.refresh is LoadState.Loading && pagingAdapter.itemCount != 0
+                    }
                     nothingHere.isVisible = loadState.refresh !is LoadState.Loading && pagingAdapter.itemCount == 0
                 }
             }
