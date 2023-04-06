@@ -9,6 +9,7 @@ import com.github.andreyasadchy.xtra.SearchStreamsQuery
 import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class SearchStreamsDataSource(
     private val query: String,
@@ -54,7 +55,7 @@ class SearchStreamsDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Stream> {
         val get = helixApi.getSearchChannels(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             query = query,
             limit = params.loadSize,
             offset = offset,

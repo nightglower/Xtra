@@ -59,7 +59,7 @@ class ClipsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
-            PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
+            PagingConfig(pageSize = 20, prefetchDistance = 3, initialLoadSize = 20)
         ) {
             val started = when (filter.period) {
                 VideoPeriodEnum.ALL -> null

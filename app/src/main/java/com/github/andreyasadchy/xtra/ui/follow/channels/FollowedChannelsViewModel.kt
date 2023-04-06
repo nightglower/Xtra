@@ -56,7 +56,7 @@ class FollowedChannelsViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
-            PagingConfig(pageSize = 40, prefetchDistance = 10, initialLoadSize = 40)
+            PagingConfig(pageSize = 15, prefetchDistance = 5, initialLoadSize = 15)
         ) {
             FollowedChannelsDataSource(
                 localFollowsChannel = localFollowsChannel,

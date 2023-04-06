@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class FollowedVideosDataSource(
     private val gqlClientId: String?,
@@ -57,7 +58,7 @@ class FollowedVideosDataSource(
     private suspend fun gqlQueryLoad(params: LoadParams<Int>): List<Video> {
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
-            gqlToken?.let { addHttpHeader("Authorization", it) }
+            gqlToken?.let { addHttpHeader("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
         }.build().query(UserFollowedVideosQuery(
             sort = Optional.Present(gqlQuerySort),
             type = Optional.Present(gqlQueryType?.let { listOf(it) }),

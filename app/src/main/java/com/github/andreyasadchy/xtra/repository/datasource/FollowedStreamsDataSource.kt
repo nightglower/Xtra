@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.repository.LocalFollowChannelRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class FollowedStreamsDataSource(
     private val localFollowsChannel: LocalFollowChannelRepository,
@@ -110,7 +111,7 @@ class FollowedStreamsDataSource(
     private suspend fun helixLoad(): List<Stream> {
         val get = helixApi.getFollowedStreams(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             userId = userId,
             limit = 100,
             offset = offset
@@ -119,7 +120,7 @@ class FollowedStreamsDataSource(
         get.data.let { list.addAll(it) }
         val ids = list.mapNotNull { it.channelId }
         if (ids.isNotEmpty()) {
-            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
+            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = ids).data
             for (i in users) {
                 val item = list.find { it.channelId == i.channelId }
                 if (item != null) {
@@ -134,7 +135,7 @@ class FollowedStreamsDataSource(
     private suspend fun gqlQueryLoad(): List<Stream> {
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
-            gqlToken?.let { addHttpHeader("Authorization", it) }
+            gqlToken?.let { addHttpHeader("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
         }.build().query(UserFollowedStreamsQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)
@@ -196,7 +197,7 @@ class FollowedStreamsDataSource(
         for (localIds in ids.chunked(100)) {
             val get = helixApi.getStreams(
                 clientId = helixClientId,
-                token = helixToken,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = localIds
             ).data
             for (i in get) {
@@ -208,7 +209,7 @@ class FollowedStreamsDataSource(
         if (streams.isNotEmpty()) {
             val userIds = streams.mapNotNull { it.channelId }
             for (streamIds in userIds.chunked(100)) {
-                val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = streamIds).data
+                val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = streamIds).data
                 for (i in users) {
                     val item = streams.find { it.channelId == i.channelId }
                     if (item != null) {

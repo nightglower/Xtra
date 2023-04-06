@@ -11,6 +11,7 @@ import com.github.andreyasadchy.xtra.model.ui.Game
 import com.github.andreyasadchy.xtra.model.ui.Tag
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class GamesDataSource(
     private val helixClientId: String?,
@@ -68,7 +69,7 @@ class GamesDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Game> {
         val get = helixApi.getTopGames(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             limit = params.loadSize,
             offset = offset
         )

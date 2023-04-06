@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.model.ui.StreamSortEnum
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.StreamSort
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class GameStreamsDataSource(
     private val gameId: String?,
@@ -73,7 +74,7 @@ class GameStreamsDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Stream> {
         val get = helixApi.getStreams(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             gameId = gameId,
             limit = params.loadSize,
             offset = offset
@@ -85,7 +86,7 @@ class GameStreamsDataSource(
             i.channelId?.let { ids.add(it) }
         }
         if (ids.isNotEmpty()) {
-            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
+            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = ids).data
             for (i in users) {
                 val items = list.filter { it.channelId == i.channelId }
                 for (item in items) {

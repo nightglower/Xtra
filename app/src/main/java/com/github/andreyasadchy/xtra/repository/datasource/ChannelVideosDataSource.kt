@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.BroadcastType
 import com.github.andreyasadchy.xtra.type.VideoSort
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class ChannelVideosDataSource(
     private val channelId: String?,
@@ -77,7 +78,7 @@ class ChannelVideosDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Video> {
         val get = helixApi.getVideos(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             channelId = channelId,
             period = helixPeriod,
             broadcastType = helixBroadcastTypes,

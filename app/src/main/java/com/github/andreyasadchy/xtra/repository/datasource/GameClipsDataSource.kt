@@ -12,6 +12,7 @@ import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.type.Language
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class GameClipsDataSource(
     private val gameId: String?,
@@ -75,7 +76,7 @@ class GameClipsDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Clip> {
         val get = helixApi.getClips(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             gameId = gameId,
             started_at = started_at,
             ended_at = ended_at,
@@ -89,7 +90,7 @@ class GameClipsDataSource(
             i.channelId?.let { userIds.add(it) }
         }
         if (userIds.isNotEmpty()) {
-            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = userIds).data
+            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = userIds).data
             for (i in users) {
                 val items = list.filter { it.channelId == i.channelId }
                 for (item in items) {

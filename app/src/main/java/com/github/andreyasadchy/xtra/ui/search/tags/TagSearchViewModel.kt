@@ -28,7 +28,7 @@ class TagSearchViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->
         Pager(
-            PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
+            PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         ) {
             TagsDataSourceGQL(
                 clientId = context.prefs().getString(C.GQL_CLIENT_ID, "kimne78kx3ncx6brgo4mv6wki5h1ko"),

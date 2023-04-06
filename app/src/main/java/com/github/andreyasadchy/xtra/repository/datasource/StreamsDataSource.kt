@@ -10,6 +10,7 @@ import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class StreamsDataSource(
     private val helixClientId: String?,
@@ -67,7 +68,7 @@ class StreamsDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Stream> {
         val get = helixApi.getStreams(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             limit = params.loadSize,
             offset = offset
         )
@@ -75,7 +76,7 @@ class StreamsDataSource(
         get.data.let { list.addAll(it) }
         val ids = list.mapNotNull { it.channelId }
         if (ids.isNotEmpty()) {
-            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken, ids = ids).data
+            val users = helixApi.getUsers(clientId = helixClientId, token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, ids = ids).data
             for (i in users) {
                 val items = list.filter { it.channelId == i.channelId }
                 for (item in items) {

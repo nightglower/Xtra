@@ -31,7 +31,7 @@ class FollowedStreamsViewModel @Inject constructor(
         if (context.prefs().getString(C.COMPACT_STREAMS, "disabled") != "disabled") {
             PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         } else {
-            PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
+            PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         }
     ) {
         FollowedStreamsDataSource(

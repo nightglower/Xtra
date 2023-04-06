@@ -11,6 +11,7 @@ import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class ChannelClipsDataSource(
     private val channelId: String?,
@@ -73,7 +74,7 @@ class ChannelClipsDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<Clip> {
         val get = helixApi.getClips(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             channelId = channelId,
             started_at = started_at,
             ended_at = ended_at,
@@ -90,7 +91,7 @@ class ChannelClipsDataSource(
         if (gameIds.isNotEmpty()) {
             val games = helixApi.getGames(
                 clientId = helixClientId,
-                token = helixToken,
+                token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
                 ids = gameIds
             ).data
             for (i in games) {

@@ -14,9 +14,9 @@ class TagsDataSourceGQL(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Tag> {
         return try {
             val response = if (query.isBlank()) listOf() else if (getGameTags) {
-                api.loadGameTags(clientId, query).data
+                api.loadGameTags(clientId, query, 100).data
             } else {
-                api.loadFreeformTags(clientId, query).data
+                api.loadFreeformTags(clientId, query, 100).data
             }
             LoadResult.Page(
                 data = response,

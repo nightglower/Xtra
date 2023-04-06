@@ -158,7 +158,7 @@ class FollowedChannelsDataSource(
     private suspend fun helixLoad(): List<User> {
         val get = helixApi.getUserFollows(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             userId = userId,
             limit = 100,
             offset = offset
@@ -170,7 +170,7 @@ class FollowedChannelsDataSource(
     private suspend fun gqlQueryLoad(): List<User> {
         val get1 = apolloClient.newBuilder().apply {
             gqlClientId?.let { addHttpHeader("Client-ID", it) }
-            gqlToken?.let { addHttpHeader("Authorization", it) }
+            gqlToken?.let { addHttpHeader("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
         }.build().query(UserFollowedUsersQuery(
             first = Optional.Present(100),
             after = Optional.Present(offset)

@@ -33,7 +33,7 @@ class VideoSearchViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->
         Pager(
-            PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
+            PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         ) {
             SearchVideosDataSource(
                 query = query,

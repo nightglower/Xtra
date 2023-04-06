@@ -10,6 +10,7 @@ import com.github.andreyasadchy.xtra.api.HelixApi
 import com.github.andreyasadchy.xtra.model.ui.User
 import com.github.andreyasadchy.xtra.repository.GraphQLRepository
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 
 class SearchChannelsDataSource(
     private val query: String,
@@ -67,7 +68,7 @@ class SearchChannelsDataSource(
     private suspend fun helixLoad(params: LoadParams<Int>): List<User> {
         val get = helixApi.getSearchChannels(
             clientId = helixClientId,
-            token = helixToken,
+            token = helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) },
             query = query,
             limit = params.loadSize,
             offset = offset

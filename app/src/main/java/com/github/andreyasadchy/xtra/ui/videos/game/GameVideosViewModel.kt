@@ -63,7 +63,7 @@ class GameVideosViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = filter.flatMapLatest { filter ->
         Pager(
-            PagingConfig(pageSize = 10, prefetchDistance = 3, initialLoadSize = 15)
+            PagingConfig(pageSize = 30, prefetchDistance = 3, initialLoadSize = 30)
         ) {
             with(filter) {
                 val langValues = context.resources.getStringArray(R.array.gqlUserLanguageValues).toList()

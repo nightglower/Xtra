@@ -32,7 +32,7 @@ class GameSearchViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val flow = query.flatMapLatest { query ->
         Pager(
-            PagingConfig(pageSize = 15, prefetchDistance = 5, initialLoadSize = 15)
+            PagingConfig(pageSize = 30, prefetchDistance = 10, initialLoadSize = 30)
         ) {
             SearchGamesDataSource(
                 query = query,

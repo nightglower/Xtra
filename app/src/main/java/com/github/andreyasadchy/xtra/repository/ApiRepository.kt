@@ -31,7 +31,7 @@ class ApiRepository @Inject constructor(
     private fun getApolloClient(clientId: String? = null, token: String? = null): ApolloClient {
         return apolloClient.newBuilder().apply {
             clientId?.let { addHttpHeader("Client-ID", it) }
-            token?.let { addHttpHeader("Authorization", it) }
+            token?.let { addHttpHeader("Authorization", TwitchApiHelper.addTokenPrefixGQL(it)) }
         }.build()
     }
 
@@ -454,7 +454,7 @@ class ApiRepository @Inject constructor(
     suspend fun loadUserEmotes(gqlClientId: String?, gqlToken: String?, channelId: String?): List<TwitchEmote> = withContext(Dispatchers.IO) {
         try {
             val emotes = mutableListOf<TwitchEmote>()
-            getApolloClient(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }).query(UserEmotesQuery()).execute().data?.user?.emoteSets?.forEach { set ->
+            getApolloClient(gqlClientId, gqlToken).query(UserEmotesQuery()).execute().data?.user?.emoteSets?.forEach { set ->
                 set.emotes?.forEach { emote ->
                     if (emote?.id != null) {
                         emotes.add(TwitchEmote(
@@ -467,7 +467,7 @@ class ApiRepository @Inject constructor(
             }
             emotes
         } catch (e: Exception) {
-            gql.loadUserEmotes(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId).data
+            gql.loadUserEmotes(gqlClientId, gqlToken, channelId).data
         }
     }
 
@@ -504,7 +504,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadUserFollowing(helixClientId: String?, helixToken: String?, targetId: String?, userId: String?, gqlClientId: String?, gqlToken: String?, targetLogin: String?): Boolean = withContext(Dispatchers.IO) {
         try {
-            if (!gqlToken.isNullOrBlank()) gql.loadFollowingUser(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, targetLogin).following else throw Exception()
+            if (!gqlToken.isNullOrBlank()) gql.loadFollowingUser(gqlClientId, gqlToken, targetLogin).following else throw Exception()
         } catch (e: Exception) {
             helix.getUserFollows(
                 clientId = helixClientId,
@@ -516,7 +516,7 @@ class ApiRepository @Inject constructor(
     }
 
     suspend fun loadGameFollowing(gqlClientId: String?, gqlToken: String?, gameName: String?): Boolean = withContext(Dispatchers.IO) {
-        gql.loadFollowingGame(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, gameName).following
+        gql.loadFollowingGame(gqlClientId, gqlToken, gameName).following
     }
 
     suspend fun loadVideoMessages(gqlClientId: String?, videoId: String, offset: Int? = null, cursor: String? = null): VideoMessagesDataResponse = withContext(Dispatchers.IO) {
@@ -533,15 +533,15 @@ class ApiRepository @Inject constructor(
 
     suspend fun loadClaimPoints(gqlClientId: String?, gqlToken: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
         try {
-            val claimId = gql.loadChannelPointsContext(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelLogin).availableClaimId
-            gql.loadClaimPoints(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, channelId, claimId)
+            val claimId = gql.loadChannelPointsContext(gqlClientId, gqlToken, channelLogin).availableClaimId
+            gql.loadClaimPoints(gqlClientId, gqlToken, channelId, claimId)
         } catch (e: Exception) {
 
         }
     }
 
     suspend fun loadJoinRaid(gqlClientId: String?, gqlToken: String?, raidId: String?) = withContext(Dispatchers.IO) {
-        gql.loadJoinRaid(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, raidId)
+        gql.loadJoinRaid(gqlClientId, gqlToken, raidId)
     }
 
     suspend fun loadMinuteWatched(userId: String?, streamId: String?, channelId: String?, channelLogin: String?) = withContext(Dispatchers.IO) {
@@ -574,31 +574,25 @@ class ApiRepository @Inject constructor(
         }
     }
 
-    private suspend fun loadClientIntegrityToken(gqlClientId: String?, gqlToken: String?, deviceId: String?): String? = withContext(Dispatchers.IO) {
-        val response = misc.getClientIntegrityToken(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, deviceId).string()
-        val tokenRegex = Regex("\"token\":\"(.*?)\"")
-        tokenRegex.find(response)?.groups?.get(1)?.value
-    }
-
     suspend fun followUser(gqlClientId: String?, gqlToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadFollowUser(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, userId).error
+        gql.loadFollowUser(gqlClientId, gqlToken, userId).error
     }
 
     suspend fun unfollowUser(gqlClientId: String?, gqlToken: String?, userId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadUnfollowUser(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, userId).error
+        gql.loadUnfollowUser(gqlClientId, gqlToken, userId).error
     }
 
     suspend fun followGame(gqlClientId: String?, gqlToken: String?, gameId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadFollowGame(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, gameId).error
+        gql.loadFollowGame(gqlClientId, gqlToken, gameId).error
     }
 
     suspend fun unfollowGame(gqlClientId: String?, gqlToken: String?, gameId: String?): String? = withContext(Dispatchers.IO) {
-        gql.loadUnfollowGame(gqlClientId, gqlToken?.let { TwitchApiHelper.addTokenPrefixGQL(it) }, null, null, gameId).error
+        gql.loadUnfollowGame(gqlClientId, gqlToken, gameId).error
     }
 
     suspend fun sendAnnouncement(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, message: String?, color: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.sendAnnouncement(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, message, color)
+            gql.sendAnnouncement(gqlClientId, gqlToken, channelId, message, color)
         } else {
             val json = JsonObject().apply {
                 addProperty("message", message)
@@ -615,7 +609,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun banUser(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.banUser(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin, duration, reason)
+            gql.banUser(gqlClientId, gqlToken, channelId, targetLogin, duration, reason)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -640,7 +634,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun unbanUser(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.unbanUser(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+            gql.unbanUser(gqlClientId, gqlToken, channelId, targetLogin)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -667,7 +661,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun updateChatColor(helixClientId: String?, helixToken: String?, userId: String?, gqlClientId: String?, gqlToken: String?, color: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.updateChatColor(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, color)
+            gql.updateChatColor(gqlClientId, gqlToken, color)
         } else {
             helix.updateChatColor(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, userId, color)
         }
@@ -720,7 +714,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun createStreamMarker(helixClientId: String?, helixToken: String?, channelId: String?, gqlClientId: String?, gqlToken: String?, channelLogin: String?, description: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.createStreamMarker(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelLogin)
+            gql.createStreamMarker(gqlClientId, gqlToken, channelLogin)
         } else {
             val json = JsonObject().apply {
                 addProperty("user_id", channelId)
@@ -747,7 +741,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun addModerator(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.addModerator(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+            gql.addModerator(gqlClientId, gqlToken, channelId, targetLogin)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -765,7 +759,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun removeModerator(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.removeModerator(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+            gql.removeModerator(gqlClientId, gqlToken, channelId, targetLogin)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -789,7 +783,7 @@ class ApiRepository @Inject constructor(
                 helixToken = helixToken,
                 gqlClientId = gqlClientId
             )?.channelId
-            gql.startRaid(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetId)
+            gql.startRaid(gqlClientId, gqlToken, channelId, targetId)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -807,7 +801,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun cancelRaid(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.cancelRaid(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId)
+            gql.cancelRaid(gqlClientId, gqlToken, channelId)
         } else {
             helix.cancelRaid(helixClientId, helixToken?.let { TwitchApiHelper.addTokenPrefixHelix(it) }, channelId)
         }
@@ -830,7 +824,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun addVip(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.addVip(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+            gql.addVip(gqlClientId, gqlToken, channelId, targetLogin)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,
@@ -848,7 +842,7 @@ class ApiRepository @Inject constructor(
 
     suspend fun removeVip(helixClientId: String?, helixToken: String?, gqlClientId: String?, gqlToken: String?, channelId: String?, targetLogin: String?): String? = withContext(Dispatchers.IO) {
         val response = if (!gqlToken.isNullOrBlank()) {
-            gql.removeVip(gqlClientId, gqlToken.let { TwitchApiHelper.addTokenPrefixGQL(it) }, channelId, targetLogin)
+            gql.removeVip(gqlClientId, gqlToken, channelId, targetLogin)
         } else {
             val targetId = helix.getUsers(
                 clientId = helixClientId,

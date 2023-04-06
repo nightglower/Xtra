@@ -338,7 +338,7 @@ object TwitchApiHelper {
     }
 
     fun getVideoUrlMapFromPreview(url: String, type: String?): MutableMap<String, String> {
-        val qualityList = listOf("chunked", "1080p60", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
+        val qualityList = listOf("chunked", "720p60", "720p30", "480p30", "360p30", "160p30", "144p30", "high", "medium", "low", "mobile", "audio_only")
         val map = mutableMapOf<String, String>()
         qualityList.forEach { quality ->
             map[quality] = url
