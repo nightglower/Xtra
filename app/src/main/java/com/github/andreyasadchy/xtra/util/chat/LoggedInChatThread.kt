@@ -11,7 +11,7 @@ import javax.net.ssl.SSLSocketFactory
 private const val TAG = "LoggedInChatThread"
 
 class LoggedInChatThread(
-    private val useSSl: Boolean,
+    private val useSSL: Boolean,
     private val userLogin: String?,
     private val userToken: String?,
     private val channelName: String,
@@ -60,9 +60,9 @@ class LoggedInChatThread(
     }
 
     private fun connect() {
-        Log.d(TAG, "Connecting to Twitch IRC - SSl $useSSl")
+        Log.d(TAG, "Connecting to Twitch IRC - SSL $useSSL")
         try {
-            socketOut = (if (useSSl) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
+            socketOut = (if (useSSL) SSLSocketFactory.getDefault().createSocket("irc.twitch.tv", 6697) else Socket("irc.twitch.tv", 6667)).apply {
                 readerOut = BufferedReader(InputStreamReader(getInputStream()))
                 writerOut = BufferedWriter(OutputStreamWriter(getOutputStream()))
                 write("PASS oauth:$userToken", writerOut)

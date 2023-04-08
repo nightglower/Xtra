@@ -208,12 +208,12 @@ object TwitchApiHelper {
         return DateUtils.formatDateTime(context, date, format)
     }
 
-    fun startChat(useSSl: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LiveChatThread {
-        return LiveChatThread(useSSl, loggedIn, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+    fun startChat(useSSL: Boolean, loggedIn: Boolean, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LiveChatThread {
+        return LiveChatThread(useSSL, loggedIn, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
     }
 
-    fun startLoggedInChat(useSSl: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LoggedInChatThread {
-        return LoggedInChatThread(useSSl, userName, userToken, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
+    fun startLoggedInChat(useSSL: Boolean, userName: String?, userToken: String?, channelName: String, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, usePubSub: Boolean, newMessageListener: OnChatMessageReceivedListener, callback: LiveChatListener): LoggedInChatThread {
+        return LoggedInChatThread(useSSL, userName, userToken, channelName, MessageListenerImpl(newMessageListener, callback, showUserNotice, showClearMsg, showClearChat, usePubSub)).apply { start() }
     }
 
     fun startPubSub(channelId: String, userId: String?, gqlToken: String?, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, client: OkHttpClient, coroutineScope: CoroutineScope, newMessageListener: OnChatMessageReceivedListener, callback: PubSubListener): PubSubWebSocket {

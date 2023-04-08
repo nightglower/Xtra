@@ -35,9 +35,6 @@ import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.extensions.LayoutContainer
 import kotlin.math.max
 
-var MAX_ADAPTER_COUNT = 200
-var MAX_LIST_COUNT = MAX_ADAPTER_COUNT + 1
-
 class ChatView : ConstraintLayout {
 
     interface MessageSenderCallback {
@@ -96,7 +93,6 @@ class ChatView : ConstraintLayout {
     fun init(fragment: Fragment) {
         this.fragment = fragment
         with(binding) {
-            MAX_ADAPTER_COUNT = context.prefs().getInt(C.CHAT_LIMIT, 600)
             adapter = ChatAdapter(
                 fragment = fragment,
                 emoteSize = context.convertDpToPixels(29.5f),
@@ -148,8 +144,9 @@ class ChatView : ConstraintLayout {
         with(binding) {
             adapter.messages!!.apply {
                 adapter.notifyItemInserted(lastIndex)
-                if (size >= MAX_LIST_COUNT) {
-                    val removeCount = size - MAX_ADAPTER_COUNT
+                val messageLimit = context.prefs().getInt(C.CHAT_LIMIT, 600)
+                if (size >= (messageLimit + 1)) {
+                    val removeCount = size - messageLimit
                     repeat(removeCount) {
                         removeAt(0)
                     }

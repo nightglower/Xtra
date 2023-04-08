@@ -8,7 +8,6 @@ import com.github.andreyasadchy.xtra.repository.ApiRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
 import com.github.andreyasadchy.xtra.ui.player.ChatReplayManager
 import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
-import com.github.andreyasadchy.xtra.ui.view.chat.MAX_ADAPTER_COUNT
 import com.github.andreyasadchy.xtra.util.SingleLiveEvent
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.chat.*
@@ -81,8 +80,9 @@ class ChatViewModel @Inject constructor(
     val viewerCount = MutableLiveData<Int?>()
     var streamId: String? = null
 
+    private var messageLimit = 600
     private val _chatMessages by lazy {
-        MutableLiveData<MutableList<ChatMessage>>().apply { value = Collections.synchronizedList(ArrayList(MAX_ADAPTER_COUNT + 1)) }
+        MutableLiveData<MutableList<ChatMessage>>().apply { value = Collections.synchronizedList(ArrayList(messageLimit + 1)) }
     }
     val chatMessages: LiveData<MutableList<ChatMessage>>
         get() = _chatMessages
@@ -99,13 +99,14 @@ class ChatViewModel @Inject constructor(
     val chatters: Collection<Chatter>?
         get() = (chat as? LiveChatController)?.chatters?.values
 
-    fun startLive(useSSl: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, useApiCommands: Boolean) {
+    fun startLive(useSSL: Boolean, usePubSub: Boolean, account: Account, isLoggedIn: Boolean, helixClientId: String?, gqlClientId: String?, gqlClientId2: String?, channelId: String?, channelLogin: String?, channelName: String?, streamId: String?, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, showUserNotice: Boolean, showClearMsg: Boolean, showClearChat: Boolean, collectPoints: Boolean, notifyPoints: Boolean, showRaids: Boolean, autoSwitchRaids: Boolean, enableRecentMsg: Boolean, recentMsgLimit: String, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean, useApiCommands: Boolean) {
         if (chat == null && channelLogin != null) {
+            this.messageLimit = messageLimit
             this.streamId = streamId
             this.showRaids = showRaids
             raidAutoSwitch = autoSwitchRaids
             chat = LiveChatController(
-                useSSl = useSSl,
+                useSSL = useSSL,
                 usePubSub = usePubSub,
                 account = account,
                 isLoggedIn = isLoggedIn,
@@ -142,8 +143,9 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun startReplay(account: Account, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean) {
+    fun startReplay(account: Account, helixClientId: String?, gqlClientId: String?, channelId: String?, channelLogin: String?, videoId: String, startTime: Double, getCurrentPosition: () -> Double, messageLimit: Int, emoteQuality: String, animateGifs: Boolean, enableStv: Boolean, enableBttv: Boolean, enableFfz: Boolean) {
         if (chat == null) {
+            this.messageLimit = messageLimit
             chat = VideoChatController(
                 clientId = gqlClientId,
                 videoId = videoId,
@@ -383,7 +385,7 @@ class ChatViewModel @Inject constructor(
     }
 
     inner class LiveChatController(
-        private val useSSl: Boolean,
+        private val useSSL: Boolean,
         private val usePubSub: Boolean,
         private val account: Account,
         private val isLoggedIn: Boolean,
@@ -441,9 +443,9 @@ class ChatViewModel @Inject constructor(
 
         override fun start() {
             pause()
-            chat = TwitchApiHelper.startChat(useSSl, isLoggedIn, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
+            chat = TwitchApiHelper.startChat(useSSL, isLoggedIn, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
             if (isLoggedIn) {
-                loggedInChat = TwitchApiHelper.startLoggedInChat(useSSl, account.login, account.gqlToken?.nullIfEmpty() ?: account.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
+                loggedInChat = TwitchApiHelper.startLoggedInChat(useSSL, account.login, account.gqlToken?.nullIfEmpty() ?: account.helixToken, channelLogin, showUserNotice, showClearMsg, showClearChat, usePubSub, this, this)
             }
             if (usePubSub && !channelId.isNullOrBlank()) {
                 pubSub = TwitchApiHelper.startPubSub(channelId, account.id, account.gqlToken, collectPoints, notifyPoints, showRaids, okHttpClient, viewModelScope, this, this)
