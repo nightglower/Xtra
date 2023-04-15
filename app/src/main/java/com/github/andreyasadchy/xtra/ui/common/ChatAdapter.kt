@@ -49,7 +49,8 @@ class ChatAdapter(
     private val rewardChatMsg: String,
     private val redeemedChatMsg: String,
     private val redeemedNoMsg: String,
-    private val imageLibrary: String?) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
+    private val imageLibrary: String?,
+    private val channelId: String?) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
     var messages: MutableList<ChatMessage>? = null
         set(value) {
@@ -64,12 +65,16 @@ class ChatAdapter(
     private val random = Random()
     private val userColors = HashMap<String, Int>()
     private val savedColors = HashMap<String, Int>()
+    private var globalStvEmotes: List<Emote>? = null
+    private var channelStvEmotes: List<Emote>? = null
+    private var globalBttvEmotes: List<Emote>? = null
+    private var channelBttvEmotes: List<Emote>? = null
+    private var globalFfzEmotes: List<Emote>? = null
+    private var channelFfzEmotes: List<Emote>? = null
     private var globalBadges: List<TwitchBadge>? = null
     private var channelBadges: List<TwitchBadge>? = null
-    private val emotes = HashMap<String, Emote>()
     private var cheerEmotes: List<CheerEmote>? = null
     private var loggedInUser: String? = null
-    private var channelId: String? = null
     private val scaledEmoteSize = (emoteSize * 0.78f).toInt()
 
     private var messageClickListener: ((CharSequence, CharSequence, String?, String?, String?) -> Unit)? = null
@@ -250,7 +255,13 @@ class ChatAdapter(
             for (value in split) {
                 val length = value.length
                 val endIndex = builderIndex + length
-                var emote = emotes[value]
+                var emote =
+                    channelStvEmotes?.find { it.name == value } ?:
+                    channelBttvEmotes?.find { it.name == value } ?:
+                    channelFfzEmotes?.find { it.name == value } ?:
+                    globalStvEmotes?.find { it.name == value } ?:
+                    globalBttvEmotes?.find { it.name == value } ?:
+                    globalFfzEmotes?.find { it.name == value }
                 val bitsCount = value.takeLastWhile { it.isDigit() }
                 val bitsName = value.substringBeforeLast(bitsCount)
                 if (bitsCount.isNotEmpty()) {
@@ -445,28 +456,44 @@ class ChatAdapter(
             })
     }
 
-    fun addGlobalBadges(list: List<TwitchBadge>) {
+    fun addGlobalStvEmotes(list: List<Emote>?) {
+        globalStvEmotes = list
+    }
+
+    fun addChannelStvEmotes(list: List<Emote>?) {
+        channelStvEmotes = list
+    }
+
+    fun addGlobalBttvEmotes(list: List<Emote>?) {
+        globalBttvEmotes = list
+    }
+
+    fun addChannelBttvEmotes(list: List<Emote>?) {
+        channelBttvEmotes = list
+    }
+
+    fun addGlobalFfzEmotes(list: List<Emote>?) {
+        globalFfzEmotes = list
+    }
+
+    fun addChannelFfzEmotes(list: List<Emote>?) {
+        channelFfzEmotes = list
+    }
+
+    fun addGlobalBadges(list: List<TwitchBadge>?) {
         globalBadges = list
     }
 
-    fun addChannelBadges(list: List<TwitchBadge>) {
+    fun addChannelBadges(list: List<TwitchBadge>?) {
         channelBadges = list
     }
 
-    fun addCheerEmotes(list: List<CheerEmote>) {
+    fun addCheerEmotes(list: List<CheerEmote>?) {
         cheerEmotes = list
     }
 
-    fun addEmotes(list: List<Emote>) {
-        emotes.putAll(list.associateBy { it.name })
-    }
-
-    fun setUsername(username: String) {
+    fun setUsername(username: String?) {
         loggedInUser = username
-    }
-
-    fun setChannelId(channelId: String?) {
-        this.channelId = channelId
     }
 
     fun setOnClickListener(listener: (CharSequence, CharSequence, String?, String?, String?) -> Unit) {

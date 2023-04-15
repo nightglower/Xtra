@@ -12,17 +12,25 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerVideoBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.chat.ChatReplayPlayerFragment
 import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.download.VideoDownloadDialog
+import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerGamesDialog
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.disable
+import com.github.andreyasadchy.xtra.util.enable
+import com.github.andreyasadchy.xtra.util.prefs
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -142,7 +150,10 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
                 }
             }
         }
-        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != video.channelId || account.login != video.channelLogin) || setting == 1)) {
             val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
             followButton?.visible()
             var initialized = false
@@ -180,7 +191,10 @@ class VideoPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayP
 
     override fun initialize() {
         viewModel.setVideo(video, requireArguments().getDouble(KEY_OFFSET))
-        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != video.channelId || account.login != video.channelLogin) || setting == 1)) {
             viewModel.isFollowingChannel(requireContext(), video.channelId, video.channelLogin)
         }
         if ((prefs.getBoolean(C.PLAYER_GAMESBUTTON, true) || prefs.getBoolean(C.PLAYER_MENU_GAMES, false)) && !video.id.isNullOrBlank()) {

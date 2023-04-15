@@ -1,7 +1,6 @@
 package com.github.andreyasadchy.xtra.util.chat
 
 import android.util.Log
-import com.github.andreyasadchy.xtra.ui.view.chat.ChatView
 import java.io.*
 import java.net.Socket
 import java.util.concurrent.Executor
@@ -15,7 +14,7 @@ class LoggedInChatThread(
     private val userLogin: String?,
     private val userToken: String?,
     private val channelName: String,
-    private val listener: OnMessageReceivedListener) : Thread(), ChatView.MessageSenderCallback {
+    private val listener: OnMessageReceivedListener) : Thread() {
     private var socketOut: Socket? = null
     private lateinit var readerOut: BufferedReader
     private lateinit var writerOut: BufferedWriter
@@ -103,7 +102,7 @@ class LoggedInChatThread(
         writers.forEach { it?.write(message + System.getProperty("line.separator")) }
     }
 
-    override fun send(message: CharSequence) {
+    fun send(message: CharSequence) {
         messageSenderExecutor.execute {
             try {
                 write("PRIVMSG $hashChannelName :$message", writerOut)

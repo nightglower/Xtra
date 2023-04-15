@@ -12,6 +12,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerClipBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Clip
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
@@ -22,7 +23,11 @@ import com.github.andreyasadchy.xtra.ui.download.HasDownloadDialog
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.enable
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.visible
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -120,7 +125,10 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
                 }
             }
         }
-        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != clip.channelId || account.login != clip.channelLogin) || setting == 1)) {
             val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
             followButton?.visible()
             var initialized = false
@@ -158,7 +166,10 @@ class ClipPlayerFragment : BasePlayerFragment(), HasDownloadDialog, ChatReplayPl
 
     override fun initialize() {
         viewModel.setClip(clip)
-        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != clip.channelId || account.login != clip.channelLogin) || setting == 1)) {
             viewModel.isFollowingChannel(requireContext(), clip.channelId, clip.channelLogin)
         }
     }

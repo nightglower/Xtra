@@ -20,7 +20,11 @@ import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.isNetworkAvailable
 import com.github.andreyasadchy.xtra.util.shortToast
 import com.github.andreyasadchy.xtra.util.toast
-import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.ExoPlaybackException
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.PlaybackException
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.Timeline
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource

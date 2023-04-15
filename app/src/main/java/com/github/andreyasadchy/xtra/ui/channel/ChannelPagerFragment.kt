@@ -89,7 +89,8 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                 navigationIcon = Utils.getNavigationIcon(activity)
                 setNavigationOnClickListener { activity.popFragment() }
             }
-            if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+            val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+            if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
                 followButton.visible()
                 var initialized = false
                 viewModel.follow.observe(viewLifecycleOwner) { pair ->
@@ -192,7 +193,10 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable {
                 updateUserLayout(user)
             }
         }
-        if ((requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = requireContext().prefs().getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if ((setting == 0 && account.id != args.channelId || account.login != args.channelLogin) || setting == 1) {
             viewModel.isFollowingChannel(requireContext(), args.channelId, args.channelLogin)
         }
     }

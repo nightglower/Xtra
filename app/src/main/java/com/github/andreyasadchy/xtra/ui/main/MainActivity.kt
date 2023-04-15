@@ -211,13 +211,6 @@ class MainActivity : AppCompatActivity(), SlidingLayout.Listener {
                         (it.childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
                         // player chat message dialog
                         (it.childFragmentManager.findFragmentById(R.id.chatFragmentContainer)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment?)?.dismiss()
-                        // channel chat message dialog
-                        /*val currentFragment = supportFragmentManager.findFragmentById(R.id.navHostFragment)?.childFragmentManager?.fragments?.getOrNull(0)
-                        if (currentFragment is ChannelPagerFragment) {
-                            val viewPager = currentFragment.requireView().findViewById<ViewPager2>(R.id.viewPager)
-                            val currentPagerFragment = currentFragment.childFragmentManager.findFragmentByTag("android:switcher:" + viewPager?.id + ":" + viewPager?.currentItem)
-                            ((currentPagerFragment as? ChatFragment)?.childFragmentManager?.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment)?.dismiss()
-                        }*/
                         try {
                             val params = PictureInPictureParams.Builder()
                                 .setSourceRectHint(Rect(0, 0, it.playerWidth, it.playerHeight))

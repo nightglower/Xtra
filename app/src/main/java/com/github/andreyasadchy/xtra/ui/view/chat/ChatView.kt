@@ -27,8 +27,6 @@ import com.github.andreyasadchy.xtra.model.chat.*
 import com.github.andreyasadchy.xtra.ui.common.ChatAdapter
 import com.github.andreyasadchy.xtra.ui.view.SlidingLayout
 import com.github.andreyasadchy.xtra.util.*
-import com.github.andreyasadchy.xtra.util.chat.Command
-import com.github.andreyasadchy.xtra.util.chat.PointsEarned
 import com.github.andreyasadchy.xtra.util.chat.Raid
 import com.github.andreyasadchy.xtra.util.chat.RoomState
 import com.google.android.material.tabs.TabLayoutMediator
@@ -37,11 +35,8 @@ import kotlin.math.max
 
 class ChatView : ConstraintLayout {
 
-    interface MessageSenderCallback {
+    interface ChatViewCallback {
         fun send(message: CharSequence)
-    }
-
-    interface RaidCallback {
         fun onRaidClicked()
         fun onRaidClose()
     }
@@ -55,18 +50,14 @@ class ChatView : ConstraintLayout {
     private var showFlexbox = false
 
     private var hasRecentEmotes: Boolean? = null
-    private var emotesAddedCount = 0
 
-    private var autoCompleteList: MutableList<Any>? = null
+    private var autoCompleteList = mutableListOf<Any>()
     private var autoCompleteAdapter: AutoCompleteAdapter? = null
 
     private lateinit var fragment: Fragment
     private var messagingEnabled = false
 
-    private var messageCallback: MessageSenderCallback? = null
-    private var raidCallback: RaidCallback? = null
-
-    private val rewardList = mutableListOf<Pair<LiveChatMessage?, PubSubPointReward?>>()
+    private var callback: ChatViewCallback? = null
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -90,7 +81,7 @@ class ChatView : ConstraintLayout {
         _binding = ViewChatBinding.inflate(LayoutInflater.from(context), this, true)
     }
 
-    fun init(fragment: Fragment) {
+    fun init(fragment: Fragment, channelId: String?) {
         this.fragment = fragment
         with(binding) {
             adapter = ChatAdapter(
@@ -109,7 +100,8 @@ class ChatView : ConstraintLayout {
                 rewardChatMsg = context.getString(R.string.chat_reward),
                 redeemedChatMsg = context.getString(R.string.redeemed),
                 redeemedNoMsg = context.getString(R.string.user_redeemed),
-                imageLibrary = context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0")
+                imageLibrary = context.prefs().getString(C.CHAT_IMAGE_LIBRARY, "0"),
+                channelId = channelId
             )
             recyclerView.let {
                 it.adapter = adapter
@@ -129,7 +121,7 @@ class ChatView : ConstraintLayout {
             }
             btnDown.setOnClickListener {
                 post {
-                    recyclerView.scrollToPosition(adapter.messages!!.lastIndex)
+                    scrollToLastPosition()
                     it.toggleVisibility()
                 }
             }
@@ -142,7 +134,7 @@ class ChatView : ConstraintLayout {
 
     fun notifyMessageAdded() {
         with(binding) {
-            adapter.messages!!.apply {
+            adapter.messages?.apply {
                 adapter.notifyItemInserted(lastIndex)
                 val messageLimit = context.prefs().getInt(C.CHAT_LIMIT, 600)
                 if (size >= (messageLimit + 1)) {
@@ -216,82 +208,17 @@ class ChatView : ConstraintLayout {
         }
     }
 
-    fun notifyCommand(command: Command) {
-        val message = when (command.type) {
-            "join" -> context.getString(R.string.chat_join, command.message)
-            "disconnect" -> context.getString(R.string.chat_disconnect, command.message, command.duration)
-            "disconnect_command" -> {
-                raidCallback?.onRaidClose()
-                hideRaid()
-                notifyRoomState(RoomState("0", "-1", "0", "0", "0"))
-                adapter.messages?.clear()
-                context.getString(R.string.disconnected)
-            }
-            "send_msg_error" -> context.getString(R.string.chat_send_msg_error, command.message)
-            "socket_error" -> context.getString(R.string.chat_socket_error, command.message)
-            "notice" -> {
-                when (command.duration) { // msg-id
-                    "unraid_success" -> hideRaid()
-                }
-                TwitchApiHelper.getNoticeString(context, command.duration, command.message)
-            }
-            "clearmsg" -> context.getString(R.string.chat_clearmsg, command.message, command.duration)
-            "clearchat" -> context.getString(R.string.chat_clear)
-            "timeout" -> context.getString(R.string.chat_timeout, command.message, TwitchApiHelper.getDurationFromSeconds(context, command.duration))
-            "ban" -> context.getString(R.string.chat_ban, command.message)
-            "stream_live" -> context.getString(R.string.stream_live, command.duration)
-            "stream_offline" -> context.getString(R.string.stream_offline, command.duration)
-            else -> command.message
-        }
-        adapter.messages?.add(LiveChatMessage(message = message, color = "#999999", isAction = true, emotes = command.emotes, timestamp = command.timestamp, fullMsg = command.fullMsg))
-        notifyMessageAdded()
-    }
-
-    fun notifyReward(message: ChatMessage) {
-        if (message is LiveChatMessage) {
-            val item = rewardList.find { it.second?.id == message.rewardId && it.second?.userId == message.userId }
-            if (item != null) {
-                message.apply { pointReward = item.second }.let {
-                    rewardList.remove(item)
-                    adapter.messages?.add(it)
-                    notifyMessageAdded()
-                }
-            } else {
-                rewardList.add(Pair(message, null))
-            }
-        } else {
-            if (message is PubSubPointReward) {
-                val item = rewardList.find { it.first?.rewardId == message.id && it.first?.userId == message.userId }
-                if (item != null) {
-                    item.first?.apply { pointReward = message }?.let {
-                        rewardList.remove(item)
-                        adapter.messages?.add(it)
-                        notifyMessageAdded()
-                    }
-                } else {
-                    rewardList.add(Pair(null, message))
-                }
-            }
-        }
-    }
-
-    fun notifyPointsEarned(points: PointsEarned) {
-        val message = context.getString(R.string.points_earned, points.pointsGained)
-        adapter.messages?.add(LiveChatMessage(message = message, color = "#999999", isAction = true, timestamp = points.timestamp, fullMsg = points.fullMsg))
-        notifyMessageAdded()
-    }
-
     fun notifyRaid(raid: Raid, newId: Boolean) {
         with(binding) {
             if (newId) {
                 raidLayout.visible()
-                raidLayout.setOnClickListener { raidCallback?.onRaidClicked() }
+                raidLayout.setOnClickListener { callback?.onRaidClicked() }
                 raidImage.visible()
                 raidImage.loadImage(fragment, raid.targetLogo, circle = true)
                 raidText.visible()
                 raidClose.visible()
                 raidClose.setOnClickListener {
-                    raidCallback?.onRaidClose()
+                    callback?.onRaidClose()
                     hideRaid()
                 }
             }
@@ -308,78 +235,74 @@ class ChatView : ConstraintLayout {
         }
     }
 
-    fun addRecentMessages(list: List<LiveChatMessage>) {
-        adapter.messages?.addAll(0, list)
-        adapter.messages?.lastIndex?.let { binding.recyclerView.scrollToPosition(it) }
+    fun scrollToLastPosition() {
+        adapter.messages?.let { binding.recyclerView.scrollToPosition(it.lastIndex) }
+    }
+
+    fun addToAutoCompleteList(list: Collection<Any>?) {
+        if (!list.isNullOrEmpty()) {
+            if (messagingEnabled) {
+                val newItems = list.filter { it !in autoCompleteList }
+                autoCompleteList.addAll(newItems)
+                autoCompleteAdapter?.addAll(newItems)
+            }
+        }
+    }
+
+    fun setRecentEmotes(list: List<Emote>?) {
+        if (!list.isNullOrEmpty()) {
+            hasRecentEmotes = true
+        }
+    }
+
+    fun addGlobalStvEmotes(list: List<Emote>?) {
+        adapter.addGlobalStvEmotes(list)
+        addToAutoCompleteList(list)
+    }
+
+    fun addChannelStvEmotes(list: List<Emote>?) {
+        adapter.addChannelStvEmotes(list)
+        addToAutoCompleteList(list)
+    }
+
+    fun addGlobalBttvEmotes(list: List<Emote>?) {
+        adapter.addGlobalBttvEmotes(list)
+        addToAutoCompleteList(list)
+    }
+
+    fun addChannelBttvEmotes(list: List<Emote>?) {
+        adapter.addChannelBttvEmotes(list)
+        addToAutoCompleteList(list)
+    }
+
+    fun addGlobalFfzEmotes(list: List<Emote>?) {
+        adapter.addGlobalFfzEmotes(list)
+        addToAutoCompleteList(list)
+    }
+
+    fun addChannelFfzEmotes(list: List<Emote>?) {
+        adapter.addChannelFfzEmotes(list)
+        addToAutoCompleteList(list)
     }
 
     fun addGlobalBadges(list: List<TwitchBadge>?) {
-        if (list != null) {
-            adapter.addGlobalBadges(list)
-        }
+        adapter.addGlobalBadges(list)
     }
 
-    fun addChannelBadges(list: List<TwitchBadge>) {
+    fun addChannelBadges(list: List<TwitchBadge>?) {
         adapter.addChannelBadges(list)
     }
 
-    fun addCheerEmotes(list: List<CheerEmote>) {
+    fun addCheerEmotes(list: List<CheerEmote>?) {
         adapter.addCheerEmotes(list)
     }
 
-    fun addEmotes(list: List<Emote>) {
-        with(binding) {
-            when (list.firstOrNull()) {
-                is BttvEmote, is FfzEmote, is StvEmote -> {
-                    adapter.addEmotes(list)
-                    if (messagingEnabled) {
-                        autoCompleteList!!.addAll(list)
-                    }
-                }
-                is TwitchEmote -> {
-                    if (messagingEnabled) {
-                        autoCompleteList!!.addAll(list)
-                    }
-                }
-                is RecentEmote -> hasRecentEmotes = true
-            }
-            if (messagingEnabled && ++emotesAddedCount == 3) { //TODO refactor to not wait
-                autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList!!, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
-                    setNotifyOnChange(false)
-                    editText.setAdapter(this)
-
-                    var previousSize = 0
-                    editText.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus && count != previousSize) {
-                            previousSize = count
-                            notifyDataSetChanged()
-                        }
-                        setNotifyOnChange(hasFocus)
-                    }
-                }
-            }
-        }
-    }
-
-    fun setUsername(username: String) {
+    fun setUsername(username: String?) {
         adapter.setUsername(username)
     }
 
-    fun setChannelId(channelId: String?) {
-        adapter.setChannelId(channelId)
-    }
-
-    fun setChatters(chatters: Collection<Chatter>?) {
-        autoCompleteList = chatters?.toMutableList()
-    }
-
-    fun addChatter(chatter: Chatter) {
-        autoCompleteAdapter?.add(chatter)
-    }
-
-    fun setCallback(callbackMessage: MessageSenderCallback, callbackRaid: RaidCallback?) {
-        messageCallback = callbackMessage
-        raidCallback = callbackRaid
+    fun setCallback(callback: ChatViewCallback) {
+        this.callback = callback
     }
 
     fun emoteMenuIsVisible(): Boolean = binding.emoteMenu.isVisible
@@ -427,6 +350,19 @@ class ChatView : ConstraintLayout {
                 MessageClickedDialog.newInstance(enableMessaging, original, formatted, userId, channelId, fullMsg).show(fragment.childFragmentManager, "closeOnPip")
             }
             if (enableMessaging) {
+                autoCompleteAdapter = AutoCompleteAdapter(context, fragment, autoCompleteList, context.prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4").apply {
+                    setNotifyOnChange(false)
+                    editText.setAdapter(this)
+
+                    var previousSize = 0
+                    editText.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus && count != previousSize) {
+                            previousSize = count
+                            notifyDataSetChanged()
+                        }
+                        setNotifyOnChange(hasFocus)
+                    }
+                }
                 editText.addTextChangedListener(onTextChanged = { text, _, _, _ ->
                     if (text?.isNotBlank() == true) {
                         send.visible()
@@ -501,12 +437,12 @@ class ChatView : ConstraintLayout {
             editText.hideKeyboard()
             editText.clearFocus()
             toggleEmoteMenu(false)
-            return messageCallback?.let {
+            return callback?.let {
                 val text = editText.text.trim()
                 editText.text.clear()
                 if (text.isNotEmpty()) {
                     it.send(text)
-                    adapter.messages?.let { messages -> recyclerView.scrollToPosition(messages.lastIndex) }
+                    scrollToLastPosition()
                     true
                 } else {
                     false

@@ -6,7 +6,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.HorizontalScrollView
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -15,13 +19,22 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerStreamBinding
+import com.github.andreyasadchy.xtra.model.Account
 import com.github.andreyasadchy.xtra.model.ui.Stream
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
+import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.BasePlayerFragment
 import com.github.andreyasadchy.xtra.ui.player.PlayerMode
 import com.github.andreyasadchy.xtra.ui.player.PlayerSettingsDialog
-import com.github.andreyasadchy.xtra.util.*
+import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.FragmentUtils
+import com.github.andreyasadchy.xtra.util.TwitchApiHelper
+import com.github.andreyasadchy.xtra.util.disable
+import com.github.andreyasadchy.xtra.util.enable
+import com.github.andreyasadchy.xtra.util.gone
+import com.github.andreyasadchy.xtra.util.shortToast
+import com.github.andreyasadchy.xtra.util.visible
 import com.google.android.exoplayer2.source.hls.HlsManifest
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -143,7 +156,10 @@ class StreamPlayerFragment : BasePlayerFragment() {
                 }
             }
         }
-        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
             val followButton = requireView().findViewById<ImageButton>(R.id.playerFollow)
             followButton?.visible()
             var initialized = false
@@ -187,7 +203,10 @@ class StreamPlayerFragment : BasePlayerFragment() {
 
     override fun initialize() {
         viewModel.startStream(stream)
-        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && (prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0) < 2) {
+        val activity = requireActivity() as MainActivity
+        val account = Account.get(activity)
+        val setting = prefs.getString(C.UI_FOLLOW_BUTTON, "0")?.toInt() ?: 0
+        if (prefs.getBoolean(C.PLAYER_FOLLOW, true) && ((setting == 0 && account.id != stream.channelId || account.login != stream.channelLogin) || setting == 1)) {
             viewModel.isFollowingChannel(requireContext(), stream.channelId, stream.channelLogin)
         }
     }
